@@ -1,13 +1,17 @@
-use crate::basics::Point;
+use crate::basics::{Point, Rectangle};
+use crate::canvas::color::Color;
+use crate::canvas::Canvas;
 use crate::model::Model;
-use crate::program::Error::CanvasError;
+use crate::window::Error::CanvasError;
 use femtovg::renderer::OpenGl;
-use femtovg::{Canvas, Color, ErrorKind, Paint, Path, Renderer};
+use femtovg::{ErrorKind, Paint, Path, Renderer};
 use glfw::{
     Context, Glfw, InitError, OpenGlProfileHint, Window, WindowEvent, WindowHint, WindowMode,
 };
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::thread::sleep;
+use std::time::Duration;
 
 pub struct Program {
     glfw: glfw::Glfw,
@@ -21,31 +25,31 @@ impl Program {
         Ok(Self { glfw: glfw })
     }
 
-    pub fn run<M: 'static + Model>(&mut self, title: &str) -> Result<(), Error> {
+    pub fn run<M: Model>(&mut self, title: &str) -> Result<(), Error> {
         let (mut window, events) = self
             .glfw
             .create_window(600, 400, title, WindowMode::Windowed)
             .ok_or(Error::WindowCreationError)?;
 
-        window.maximize();
+        let mut canvas = Canvas::new(|str| window.get_proc_address(str))?;
+
         window.set_mouse_button_polling(true);
         window.set_key_polling(true);
         window.set_char_polling(true);
         window.set_framebuffer_size_polling(true);
 
-        let opengl = unsafe { OpenGl::new_from_function(|str| window.get_proc_address(str)) }?;
-        let mut canvas = Canvas::new(opengl)?;
+        window.maximize();
 
-        let mut size = window.get_framebuffer_size();
-        let dpi = window.get_size().0 as f32 / size.0 as f32;
+        let mut size: Point = window.get_framebuffer_size().into();
+        let dpi = window.get_size().0 as f32 / size.x as f32;
 
-        canvas.set_size(size.0 as u32, size.1 as u32, dpi);
+        canvas.set_size(size, dpi);
+
+        let (mut model, cmd) = M::init();
+        let view = &model.view();
 
         while !window.should_close() {
-            let mut rect = Path::new();
-            rect.rect(100.0, 100.0, 200.0, 200.0);
-            canvas.clear_rect(0, 0, width as u32, height as u32, Color::black());
-            canvas.fill_path(&rect, &Paint::color(Color::rgb(0, 0, 255)));
+            view.draw(&mut canvas, Rectangle::from_size(size));
             canvas.flush();
 
             window.swap_buffers();
@@ -53,8 +57,8 @@ impl Program {
             for (_, event) in glfw::flush_messages(&events) {
                 match event {
                     WindowEvent::FramebufferSize(width, height) => {
-                        size = (width, height);
-                        canvas.set_size(width as u32, height as u32, dpi);
+                        size = Point::new(width as i32, height as i32);
+                        canvas.set_size(size, dpi);
                     }
                     _ => (),
                 }
