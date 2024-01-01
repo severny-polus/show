@@ -1,118 +1,14 @@
-use crate::basics::{Interval, Point, Rectangle};
-use crate::canvas::color::Color;
-use crate::canvas::{Canvas, Fill, Shape};
+use glow::HasContext;
 
-pub struct View<M> {
-    pub width: Length,
-    pub height: Length,
-    pub shapes: Vec<Shape>,
-    pub children: Vec<View<M>>,
-    pub orientation: Orientation,
-    pub margin: Indents,
-    pub padding: Indents,
-    pub on_click: Option<M>,
-}
+use crate::basics::{Interval, Point, Bounds};
+use crate::canvas::color::Color;
+use crate::canvas::{Canvas, Rectangle, Shape, Object};
 
 #[derive(Copy, Clone)]
 pub enum Length {
     Pixels(u32),
     Fill,
     FillPortion(u32),
-}
-
-pub enum Orientation {
-    Vertical,
-    Horizontal,
-}
-
-#[derive(Copy, Clone)]
-pub struct Indents {
-    left: u32,
-    top: u32,
-    right: u32,
-    bottom: u32,
-}
-
-impl<M> View<M> {
-    pub fn draw(&self, canvas: &mut Canvas, bounds: Rectangle) {
-        let bounds = bounds.shrink(self.padding.into());
-        for shape in &self.shapes {
-            shape.draw(canvas, bounds)
-        }
-        self.draw_children(canvas, bounds.min, bounds.size())
-    }
-
-    fn draw_children(&self, canvas: &mut Canvas, top_left: Point, size: Point) {
-        match self.orientation {
-            Orientation::Vertical => {
-                let child_portions_y = self.count_child_portions_y();
-                self.children.iter().fold(top_left.y, |child_top, child| {
-                    child
-                        .draw_as_child(
-                            canvas,
-                            Point::new(top_left.x, child_top),
-                            size,
-                            1,
-                            child_portions_y,
-                        )
-                        .y
-                });
-            }
-            Orientation::Horizontal => {
-                let child_portions_x = self.count_child_portions_x();
-                self.children.iter().fold(top_left.x, |child_left, child| {
-                    child
-                        .draw_as_child(
-                            canvas,
-                            Point::new(child_left, top_left.y),
-                            size,
-                            child_portions_x,
-                            1,
-                        )
-                        .x
-                });
-            }
-        }
-    }
-
-    fn draw_as_child(
-        &self,
-        canvas: &mut Canvas,
-        origin: Point,
-        max_size: Point,
-        portions_x: u32,
-        portions_y: u32,
-    ) -> Point {
-        let size = Point::new(
-            self.width.pixels(max_size.x as u32, portions_x) as i32,
-            self.height.pixels(max_size.y as u32, portions_y) as i32,
-        );
-        let bounds = origin.blow_rectangle(size);
-        self.draw(canvas, bounds.shrink(self.margin.into()));
-        bounds.max
-    }
-
-    fn count_child_portions_x(&self) -> u32 {
-        Length::count_portions(self.children.iter().map(|child| child.width))
-    }
-    fn count_child_portions_y(&self) -> u32 {
-        Length::count_portions(self.children.iter().map(|child| child.height))
-    }
-}
-
-impl<M> Default for View<M> {
-    fn default() -> Self {
-        Self {
-            width: Length::Pixels(0),
-            height: Length::Pixels(0),
-            shapes: vec![],
-            children: vec![],
-            orientation: Orientation::Vertical,
-            margin: Default::default(),
-            padding: Default::default(),
-            on_click: None,
-        }
-    }
 }
 
 impl Length {
@@ -133,6 +29,14 @@ impl Length {
             })
             .sum()
     }
+}
+
+#[derive(Copy, Clone)]
+pub struct Indents {
+    left: u32,
+    top: u32,
+    right: u32,
+    bottom: u32,
 }
 
 impl Default for Indents {
@@ -186,6 +90,104 @@ impl Into<(i32, i32, i32, i32)> for Indents {
     }
 }
 
+pub enum Orientation {
+    Vertical,
+    Horizontal,
+}
+
+pub struct View<M> {
+    pub width: Length,
+    pub height: Length,
+    pub shapes: Vec<Shape>,
+    pub children: Vec<View<M>>,
+    pub orientation: Orientation,
+    pub margin: Indents,
+    pub padding: Indents,
+    pub on_click: Option<M>,
+}
+
+impl<M> View<M> {
+    pub fn draw(&self, canvas: &mut Canvas, bounds: Bounds) {
+        let bounds = bounds.shrink(self.padding.into());
+        for shape in &self.shapes {
+            shape.draw(canvas, bounds)
+        }
+        self.draw_children(canvas, bounds.min, bounds.size())
+    }
+
+    fn draw_children(&self, canvas: &mut Canvas, top_left: Point, size: Point) {
+        match self.orientation {
+            Orientation::Vertical => {
+                let child_portions_y = self.count_child_portions_y();
+                self.children.iter().fold(top_left.y, |child_top, child| {
+                    child
+                        .draw_into(
+                            canvas,
+                            Point::new(top_left.x, child_top),
+                            size,
+                            1,
+                            child_portions_y,
+                        )
+                        .y
+                });
+            }
+            Orientation::Horizontal => {
+                let child_portions_x = self.count_child_portions_x();
+                self.children.iter().fold(top_left.x, |child_left, child| {
+                    child
+                        .draw_into(
+                            canvas,
+                            Point::new(child_left, top_left.y),
+                            size,
+                            child_portions_x,
+                            1,
+                        )
+                        .x
+                });
+            }
+        }
+    }
+
+    fn draw_into(
+        &self,
+        canvas: &mut Canvas,
+        origin: Point,
+        max_size: Point,
+        portions_x: u32,
+        portions_y: u32,
+    ) -> Point {
+        let size = Point::new(
+            self.width.pixels(max_size.x as u32, portions_x) as i32,
+            self.height.pixels(max_size.y as u32, portions_y) as i32,
+        );
+        let bounds = origin.blow_rectangle(size);
+        self.draw(canvas, bounds.shrink(self.margin.into()));
+        bounds.max
+    }
+
+    fn count_child_portions_x(&self) -> u32 {
+        Length::count_portions(self.children.iter().map(|child| child.width))
+    }
+    fn count_child_portions_y(&self) -> u32 {
+        Length::count_portions(self.children.iter().map(|child| child.height))
+    }
+}
+
+impl<M> Default for View<M> {
+    fn default() -> Self {
+        Self {
+            width: Length::Pixels(0),
+            height: Length::Pixels(0),
+            shapes: vec![],
+            children: vec![],
+            orientation: Orientation::Vertical,
+            margin: Default::default(),
+            padding: Default::default(),
+            on_click: None,
+        }
+    }
+}
+
 pub fn my_view<M>(message: M) -> View<M> {
     View {
         width: Length::Fill,
@@ -219,4 +221,8 @@ pub fn row<M>() -> View<M> {
         padding: Default::default(),
         on_click: None,
     }
+}
+
+pub struct Element {
+    
 }

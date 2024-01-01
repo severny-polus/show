@@ -20,11 +20,13 @@ enum Message {
 }
 
 impl Model for App {
+
+    type Message = Message;
+
     fn init() -> (Self, Command<Self::Message>) {
         (Self {}, Command::None)
     }
-
-    type Message = Message;
+    
     fn update(&mut self, message: Self::Message) {}
 
     fn view(&self) -> View<Self::Message> {

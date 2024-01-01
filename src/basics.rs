@@ -19,8 +19,8 @@ impl Point {
         Self { x: 0, y: 0 }
     }
 
-    pub fn blow_rectangle(self, size: Self) -> Rectangle {
-        Rectangle::pull(self, size)
+    pub fn blow_rectangle(self, size: Self) -> Bounds {
+        Bounds::pull(self, size)
     }
 
     pub fn mul(self, c: i32) -> Self {
@@ -60,12 +60,12 @@ impl Sub for Point {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Rectangle {
+pub struct Bounds {
     pub min: Point,
     pub max: Point,
 }
 
-impl Rectangle {
+impl Bounds {
     pub fn from_intervals(x: Interval, y: Interval) -> Self {
         Self {
             min: Point::new(x.min, y.min),

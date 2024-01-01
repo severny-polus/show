@@ -1,17 +1,7 @@
-use crate::basics::{Point, Rectangle};
-use crate::canvas::color::Color;
+use crate::basics::{Bounds, Point};
 use crate::canvas::Canvas;
 use crate::model::Model;
-use crate::window::Error::CanvasError;
-use femtovg::renderer::OpenGl;
-use femtovg::{ErrorKind, Paint, Path, Renderer};
-use glfw::{
-    Context, Glfw, InitError, OpenGlProfileHint, Window, WindowEvent, WindowHint, WindowMode,
-};
-use std::marker::PhantomData;
-use std::ops::Deref;
-use std::thread::sleep;
-use std::time::Duration;
+use glfw::{Context, InitError, OpenGlProfileHint, WindowEvent, WindowHint, WindowMode};
 
 pub struct Program {
     glfw: glfw::Glfw,
@@ -19,7 +9,7 @@ pub struct Program {
 
 impl Program {
     pub fn new() -> Result<Self, Error> {
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)?;
+        let mut glfw = glfw::init_no_callbacks()?;
         glfw.window_hint(WindowHint::ContextVersion(3, 3));
         glfw.window_hint(WindowHint::OpenGlProfile(OpenGlProfileHint::Core));
         Ok(Self { glfw: glfw })
@@ -31,8 +21,6 @@ impl Program {
             .create_window(600, 400, title, WindowMode::Windowed)
             .ok_or(Error::WindowCreationError)?;
 
-        let mut canvas = Canvas::new(|str| window.get_proc_address(str))?;
-
         window.set_mouse_button_polling(true);
         window.set_key_polling(true);
         window.set_char_polling(true);
@@ -43,13 +31,13 @@ impl Program {
         let mut size: Point = window.get_framebuffer_size().into();
         let dpi = window.get_size().0 as f32 / size.x as f32;
 
-        canvas.set_size(size, dpi);
+        let mut canvas = Canvas::new(size, dpi, |str| window.get_proc_address(str))?;
 
         let (mut model, cmd) = M::init();
         let view = &model.view();
 
         while !window.should_close() {
-            view.draw(&mut canvas, Rectangle::from_size(size));
+            view.draw(&mut canvas, Bounds::from_size(size));
             canvas.flush();
 
             window.swap_buffers();
@@ -58,7 +46,7 @@ impl Program {
                 match event {
                     WindowEvent::FramebufferSize(width, height) => {
                         size = Point::new(width as i32, height as i32);
-                        canvas.set_size(size, dpi);
+                        canvas.set_size(size);
                     }
                     _ => (),
                 }
@@ -73,7 +61,7 @@ impl Program {
 pub enum Error {
     InitError(InitError),
     WindowCreationError,
-    CanvasError(ErrorKind),
+    CanvasError(String),
 }
 
 impl From<InitError> for Error {
@@ -82,8 +70,8 @@ impl From<InitError> for Error {
     }
 }
 
-impl From<ErrorKind> for Error {
-    fn from(value: ErrorKind) -> Self {
+impl From<String> for Error {
+    fn from(value: String) -> Self {
         Error::CanvasError(value)
     }
 }
