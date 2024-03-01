@@ -38,6 +38,7 @@ impl Program {
 
         while !window.should_close() {
             view.draw(&mut canvas, Bounds::from_size(size));
+            // canvas.clear();
             canvas.flush();
 
             window.swap_buffers();

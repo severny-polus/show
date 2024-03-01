@@ -1,8 +1,8 @@
-use glow::HasContext;
 
-use crate::basics::{Interval, Point, Bounds};
+use crate::basics::{Point, Bounds};
 use crate::canvas::color::Color;
-use crate::canvas::{Canvas, Rectangle, Shape, Object};
+use crate::canvas::shape::Shape;
+use crate::canvas::{Canvas};
 
 #[derive(Copy, Clone)]
 pub enum Length {
@@ -160,7 +160,7 @@ impl<M> View<M> {
             self.width.pixels(max_size.x as u32, portions_x) as i32,
             self.height.pixels(max_size.y as u32, portions_y) as i32,
         );
-        let bounds = origin.blow_rectangle(size);
+        let bounds = origin.pull(size);
         self.draw(canvas, bounds.shrink(self.margin.into()));
         bounds.max
     }
@@ -193,12 +193,12 @@ pub fn my_view<M>(message: M) -> View<M> {
         width: Length::Fill,
         height: Length::Fill,
         shapes: vec![
-            Shape::Fill {
+            Shape::Rectangle {
                 color: Color::hex("#4488cc"),
             },
-            Shape::Stroke {
+            Shape::Border {
                 color: Color::hex("#ffffff"),
-                line_width: 1.0,
+                line_width: 1,
             },
             Shape::Text {
                 string: "Hello".to_string(),

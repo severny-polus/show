@@ -1,7 +1,7 @@
 use crate::Message::ButtonClick;
-use show::basics::Rectangle;
+use show::basics::Bounds;
 use show::canvas::color::Color;
-use show::canvas::Shape;
+use show::canvas::shape::Shape;
 use show::command::Command;
 use show::model::Model;
 use show::view::{my_view, Orientation, View};
@@ -20,19 +20,18 @@ enum Message {
 }
 
 impl Model for App {
-
     type Message = Message;
 
     fn init() -> (Self, Command<Self::Message>) {
         (Self {}, Command::None)
     }
-    
+
     fn update(&mut self, message: Self::Message) {}
 
     fn view(&self) -> View<Self::Message> {
         View {
-            shapes: vec![Shape::Fill {
-                color: Color::hex("#4488cc"),
+            shapes: vec![Shape::Rectangle {
+                color: "#4488cc".into(),
             }],
             children: vec![
                 my_view(ButtonClick),

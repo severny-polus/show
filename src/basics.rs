@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Neg, Sub};
+use std::ops::{Add, Mul, Neg, Range, Sub};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Point {
@@ -19,8 +19,12 @@ impl Point {
         Self { x: 0, y: 0 }
     }
 
-    pub fn blow_rectangle(self, size: Self) -> Bounds {
+    pub fn pull(self, size: Self) -> Bounds {
         Bounds::pull(self, size)
+    }
+
+    pub fn pull_wh(self, width: i32, height: i32) -> Bounds {
+        Bounds::pull(self, Point::new(width, height)).fix()
     }
 
     pub fn mul(self, c: i32) -> Self {
@@ -89,7 +93,7 @@ impl Bounds {
         Self::from_points(Point::zero(), Point::zero())
     }
 
-    pub fn fixed(self) -> Self {
+    pub fn fix(self) -> Self {
         let (x1, x2) = min_max(self.min.x, self.max.x);
         let (y1, y2) = min_max(self.min.y, self.max.y);
         Self::new(x1, y1, x2, y2)
@@ -149,6 +153,14 @@ impl Bounds {
     pub fn pull(p: Point, v: Point) -> Self {
         Self::from_points(p, p + v)
     }
+
+    pub fn top_left(self) -> Point {
+        Point::new(self.min.x, self.max.y)
+    }
+
+    pub fn bottom_right(self) -> Point {
+        Point::new(self.max.x, self.min.y)
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -193,6 +205,10 @@ impl Interval {
 
     pub fn shrink(self, v: i32) -> Self {
         Self::from_bounds(self.min + v, self.max - v)
+    }
+
+    pub fn into_range(self) -> Range<i32> {
+        self.min..self.max
     }
 }
 
