@@ -1,11 +1,10 @@
 pub mod color;
-pub mod shape;
 
-use crate::basics::{Bounds, Point};
-use color::Color;
+use crate::math::{Bounds, Point};
+pub use color::Color;
 use core::ffi::c_void;
 use glow::{self, Buffer, Context, HasContext, Program, Shader, Texture, VertexArray};
-use image::{ImageBuffer, Pixel, Rgba};
+use image::{GenericImageView, ImageBuffer, Pixel, Rgba};
 use std::{mem::size_of, slice::from_raw_parts};
 
 const VERTEX_SHADER_SOURCE: &str = r#"
@@ -105,6 +104,24 @@ unsafe fn create_vertex_array(gl: &Context) -> Result<(VertexArray, Vec<Buffer>)
     Ok((vao, vec![position, tex_coord]))
 }
 
+unsafe fn create_texture(gl: &Context) -> Result<Texture, String> {
+    let texture = gl.create_texture()?;
+    gl.bind_texture(glow::TEXTURE_2D, Some(texture));
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_MIN_FILTER,
+        glow::NEAREST as i32,
+    );
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_MAG_FILTER,
+        glow::NEAREST as i32,
+    );
+    gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_S, glow::REPEAT as i32);
+    gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_T, glow::REPEAT as i32);
+    Ok(texture)
+}
+
 pub struct Canvas {
     gl: Context,
     program: Program,
@@ -114,7 +131,7 @@ pub struct Canvas {
 
     size: Point,
     dpi: f32,
-    pixels: ImageBuffer<Rgba<u8>, Vec<u8>>,
+    image: ImageBuffer<Rgba<u8>, Vec<u8>>,
 }
 
 impl Canvas {
@@ -130,42 +147,44 @@ impl Canvas {
                 compile_shader(&gl, glow::VERTEX_SHADER, VERTEX_SHADER_SOURCE)?,
                 compile_shader(&gl, glow::FRAGMENT_SHADER, FRAGMENT_SHADER_SOURCE)?,
             )?;
-            gl.viewport(0, 0, size.x, size.y);
             gl.use_program(Some(program));
-            gl.clear_color(0., 0., 0., 1.);
             let (vao, vbos) = create_vertex_array(&gl)?;
-            let texture = gl.create_texture()?;
-            gl.bind_texture(glow::TEXTURE_2D, Some(texture));
-            gl.tex_parameter_i32(
-                glow::TEXTURE_2D,
-                glow::TEXTURE_MIN_FILTER,
-                glow::NEAREST as i32,
-            );
-            gl.tex_parameter_i32(
-                glow::TEXTURE_2D,
-                glow::TEXTURE_MAG_FILTER,
-                glow::NEAREST as i32,
-            );
-            gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_S, glow::REPEAT as i32);
-            gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_T, glow::REPEAT as i32);
-            Ok(Self {
+            let texture = create_texture(&gl)?;
+            gl.clear_color(0., 0., 0., 1.);
+            let mut canvas = Self {
                 gl,
                 program,
                 vao,
                 vbos,
                 texture,
 
-                size,
+                size: Point::zero(),
                 dpi,
-                pixels: ImageBuffer::from_pixel(size.x as u32, size.y as u32, Rgba([0, 0, 0, 255])),
-            })
+                image: ImageBuffer::new(0, 0),
+            };
+            canvas.set_size(size);
+            Ok(canvas)
         }
     }
 
     pub fn set_size(&mut self, size: Point) {
         self.size = size;
-        unsafe { self.gl.viewport(0, 0, size.x, size.y) };
-        self.pixels = ImageBuffer::from_pixel(size.x as u32, size.y as u32, Rgba([0, 0, 0, 255]));
+        unsafe {
+            self.gl.viewport(0, 0, size.x, size.y);
+            // self.gl.tex_storage_2d(glow::TEXTURE_2D, 1, glow::RGBA8, size.x, size.y); // doesn't work
+            self.gl.tex_image_2d(
+                glow::TEXTURE_2D,
+                0,
+                glow::RGBA as i32,
+                size.x,
+                size.y,
+                0,
+                glow::RGBA,
+                glow::UNSIGNED_BYTE,
+                None,
+            );
+        };
+        self.image = ImageBuffer::new(size.x as u32, size.y as u32);
     }
 
     pub fn clear(&self) {
@@ -174,16 +193,16 @@ impl Canvas {
 
     pub fn update(&self) {
         unsafe {
-            self.gl.tex_image_2d(
+            self.gl.tex_sub_image_2d(
                 glow::TEXTURE_2D,
                 0,
-                glow::RGBA as i32,
-                self.size.x,
-                self.size.y,
                 0,
+                0,
+                self.image.width() as i32,
+                self.image.height() as i32,
                 glow::RGBA,
                 glow::UNSIGNED_BYTE,
-                Some(self.pixels.as_raw().as_slice()),
+                glow::PixelUnpackData::Slice(self.image.as_raw().as_slice()),
             );
         }
     }
@@ -210,20 +229,25 @@ impl Drop for Canvas {
 }
 
 impl Canvas {
-    fn set_pixel(&mut self, x: i32, y: i32, color: &Color) {
-        let pixel = self.pixels.get_pixel_mut(x as u32, y as u32);
-        pixel.blend(&Rgba(color.to_array()));
+    pub fn set_pixel(&mut self, x: i32, y: i32, color: Color) {
+        let x = x as u32;
+        let y = y as u32;
+        if self.image.in_bounds(x, y) {
+            let pixel = self.image.get_pixel_mut(x, y);
+            pixel.blend(&Rgba(color.to_array()));
+        }
     }
 
-    fn fill_rectangle(&mut self, color: &Color, bounds: Bounds) {
-        for x in bounds.x().into_range() {
-            for y in bounds.y().into_range() {
-                self.set_pixel(x, y, color)
+    pub fn fill_rectangle(&mut self, color: Color, bounds: Bounds) {
+        for x in bounds.x().range() {
+            for y in bounds.y().range() {
+                self.set_pixel(x, y, color);
             }
         }
     }
 
-    fn stroke_rectangle(&mut self, lw: i32, color: &Color, b: Bounds) {
+    pub fn stroke_rectangle(&mut self, lw: u32, color: Color, b: Bounds) {
+        let lw = lw as i32;
         self.fill_rectangle(
             color,
             Bounds::new(b.min.x, b.min.y, b.min.x + lw, b.max.y - lw),

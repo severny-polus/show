@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Neg, Range, Sub};
+use std::ops::{Add, Neg, Range, Sub};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Point {
@@ -36,9 +36,15 @@ impl Point {
     }
 }
 
+impl Default for Point {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
 impl From<(i32, i32)> for Point {
     fn from(value: (i32, i32)) -> Self {
-        Point::from_pair(value)
+        Self::from_pair(value)
     }
 }
 
@@ -59,7 +65,15 @@ impl Neg for Point {
 impl Sub for Point {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
-        self + (-rhs)
+        self + -rhs
+    }
+}
+
+fn min_max(a: i32, b: i32) -> (i32, i32) {
+    if a < b {
+        (a, b)
+    } else {
+        (b, a)
     }
 }
 
@@ -143,13 +157,6 @@ impl Bounds {
         }
     }
 
-    pub fn shrink(self, (left, top, right, bottom): (i32, i32, i32, i32)) -> Self {
-        Self::from_points(
-            self.min + Point::new(left, top),
-            self.max - Point::new(right, bottom),
-        )
-    }
-
     pub fn pull(p: Point, v: Point) -> Self {
         Self::from_points(p, p + v)
     }
@@ -160,6 +167,12 @@ impl Bounds {
 
     pub fn bottom_right(self) -> Point {
         Point::new(self.max.x, self.min.y)
+    }
+}
+
+impl Default for Bounds {
+    fn default() -> Self {
+        Self::zero()
     }
 }
 
@@ -207,75 +220,7 @@ impl Interval {
         Self::from_bounds(self.min + v, self.max - v)
     }
 
-    pub fn into_range(self) -> Range<i32> {
+    pub fn range(self) -> Range<i32> {
         self.min..self.max
-    }
-}
-
-fn min_max(a: i32, b: i32) -> (i32, i32) {
-    if a < b {
-        (a, b)
-    } else {
-        (b, a)
-    }
-}
-
-pub struct NDInterval<const N: usize> {
-    min: NDPoint<N>,
-    max: NDPoint<N>,
-}
-
-pub struct NDPoint<const N: usize> {
-    coordinates: [i32; N],
-}
-
-impl<const N: usize> NDPoint<N> {
-    fn new(coordinates: [i32; N]) -> Self {
-        Self { coordinates }
-    }
-
-    fn zero() -> Self {
-        Self {
-            coordinates: [0; N],
-        }
-    }
-
-    fn mul(self, c: i32) -> Self {
-        Self {
-            coordinates: self.coordinates.map(|x| x * c),
-        }
-    }
-
-    fn div(self, c: i32) -> Self {
-        Self {
-            coordinates: self.coordinates.map(|x| x / c),
-        }
-    }
-}
-
-impl<const N: usize> Add for NDPoint<N> {
-    type Output = NDPoint<N>;
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut coordinates = [0; N];
-        for i in 0..N {
-            coordinates[i] = self.coordinates[i] + rhs.coordinates[i];
-        }
-        NDPoint { coordinates }
-    }
-}
-
-impl<const N: usize> Neg for NDPoint<N> {
-    type Output = NDPoint<N>;
-    fn neg(self) -> Self::Output {
-        NDPoint {
-            coordinates: self.coordinates.map(|a| -a),
-        }
-    }
-}
-
-impl<const N: usize> Sub for NDPoint<N> {
-    type Output = NDPoint<N>;
-    fn sub(self, rhs: Self) -> Self::Output {
-        self + (-rhs)
     }
 }
