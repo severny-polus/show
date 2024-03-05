@@ -1,11 +1,12 @@
 pub mod color;
 pub mod gradient;
+pub mod solid;
 pub mod util;
 
 use crate::math::{Bounds, Point};
 pub use color::Color;
 use core::ffi::c_void;
-use glow::{self, Buffer, Context, HasContext, Program, Texture, VertexArray};
+use glow::{self, Buffer, Context, HasContext, Program, Texture, UniformLocation, VertexArray};
 use image::{GenericImageView, ImageBuffer, Pixel, Rgba};
 use std::mem::size_of;
 
@@ -32,14 +33,13 @@ const FRAGMENT_SHADER_SOURCE: &str = r#"
 
 pub struct Canvas {
     gl: Context,
-    program: Program,
-    vao: VertexArray,
-    vbos: Vec<Buffer>,
-    texture: Texture,
 
     size: Point,
     dpi: f32,
     image: ImageBuffer<Rgba<u8>, Vec<u8>>,
+
+    solid_program: Program,
+    solid_program_color: UniformLocation,
 
     gradient_program: Program,
 }
@@ -63,24 +63,28 @@ impl Canvas {
             let (vao, vbos) = util::create_vertex_array(&gl)?;
             let texture = util::create_texture(&gl)?;
 
+            let solid_program = util::create_program(
+                &gl,
+                solid::VERTEX_SHADER_SOURCE,
+                solid::FRAGMENT_SHADER_SOURCE,
+            )?;
+            let solid_program_color = gl.get_uniform_location(solid_program, "color").unwrap();
+
             let gradient_program = util::create_program(
                 &gl,
                 gradient::VERTEX_SHADER_SOURCE,
                 gradient::FRAGMENT_SHADER_SOURCE,
-            )
-            .unwrap();
+            )?;
 
             let mut canvas = Self {
                 gl,
-                program,
-                vao,
-                vbos,
-                texture,
 
                 size: Point::zero(),
                 dpi,
                 image: ImageBuffer::new(0, 0),
 
+                solid_program,
+                solid_program_color,
                 gradient_program,
             };
             canvas.set_size(size);
@@ -131,64 +135,56 @@ impl Canvas {
     }
 }
 
-impl Drop for Canvas {
-    fn drop(&mut self) {
+fn to_screen(value: i32, max: f32) -> f32 {
+    2. * value as f32 / max - 1.
+}
+
+impl Canvas {
+    pub fn draw_lines(&self, points: &[Point], color: Color) {
+        let w = self.size.x as f32;
+        let h = self.size.y as f32;
+        let floats: Vec<f32> = points
+            .iter()
+            .map(|p| [2. * p.x as f32 / w - 1., 2. * p.y as f32 / h - 1.])
+            .flatten()
+            .collect();
         unsafe {
-            self.gl.delete_texture(self.texture);
-            self.gl.delete_vertex_array(self.vao);
-            for &vbo in &self.vbos {
-                self.gl.delete_buffer(vbo);
-            }
-            self.gl.delete_program(self.program);
+            self.gl.use_program(Some(self.solid_program));
+
+            let array = self.gl.create_vertex_array().unwrap();
+            self.gl.bind_vertex_array(Some(array));
+
+            let buffer = util::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
+            self.gl.vertex_attrib_pointer_f32(
+                0,
+                2,
+                glow::FLOAT,
+                false,
+                2 * size_of::<f32>() as i32,
+                0,
+            );
+            self.gl.enable_vertex_attrib_array(0);
+
+            self.gl.uniform_4_f32(
+                Some(&self.solid_program_color),
+                color.r as f32 / 255.,
+                color.g as f32 / 255.,
+                color.b as f32 / 255.,
+                color.a as f32 / 255.,
+            );
+
+            self.gl
+                .draw_arrays(glow::LINE_STRIP, 0, points.len() as i32);
+
+            self.gl.delete_buffer(buffer);
+            self.gl.delete_vertex_array(array);
         }
     }
-}
 
-impl Canvas {
-    pub fn set_pixel(&mut self, x: i32, y: i32, color: Color) {
-        let x = x as u32;
-        let y = y as u32;
-        if self.image.in_bounds(x, y) {
-            let pixel = self.image.get_pixel_mut(x, y);
-            pixel.blend(&Rgba(color.to_array()));
-        }
-    }
-
-    pub fn fill_rectangle(&mut self, color: Color, bounds: Bounds) {
-        for x in bounds.x().range() {
-            for y in bounds.y().range() {
-                self.set_pixel(x, y, color);
-            }
-        }
-    }
-
-    pub fn stroke_rectangle(&mut self, lw: u32, color: Color, b: Bounds) {
-        let lw = lw as i32;
-        self.fill_rectangle(
-            color,
-            Bounds::new(b.min.x, b.min.y, b.min.x + lw, b.max.y - lw),
-        );
-        self.fill_rectangle(
-            color,
-            Bounds::new(b.min.x, b.max.y - lw, b.max.x - lw, b.max.y),
-        );
-        self.fill_rectangle(
-            color,
-            Bounds::new(b.max.x - lw, b.min.y + lw, b.max.x, b.max.y),
-        );
-        self.fill_rectangle(
-            color,
-            Bounds::new(b.min.x + lw, b.min.y, b.max.x, b.min.y + lw),
-        );
-    }
-}
-
-impl Canvas {
     pub fn draw_lines_gradient(&self, points: &[(Point, Color)]) {
         let w = self.size.x as f32;
         let h = self.size.y as f32;
-        let n = points.len();
-        let points: Vec<f32> = points
+        let floats: Vec<f32> = points
             .iter()
             .map(|(p, c)| {
                 [
@@ -208,7 +204,7 @@ impl Canvas {
             let array = self.gl.create_vertex_array().unwrap();
             self.gl.bind_vertex_array(Some(array));
 
-            let buffer = util::create_buffer(&self.gl, points.as_slice(), glow::STREAM_DRAW);
+            let buffer = util::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
             self.gl.vertex_attrib_pointer_f32(
                 0,
                 2,
@@ -228,10 +224,61 @@ impl Canvas {
             );
             self.gl.enable_vertex_attrib_array(1);
 
-            self.gl.draw_arrays(glow::LINE_STRIP, 0, n as i32);
+            self.gl
+                .draw_arrays(glow::LINE_STRIP, 0, points.len() as i32);
 
             self.gl.delete_buffer(buffer);
             self.gl.delete_vertex_array(array);
         }
+    }
+
+    pub fn draw_quadrangle(&self, a: Point, b: Point, c: Point, d: Point, color: Color) {
+        let w = self.size.x as f32;
+        let h = self.size.y as f32;
+        let floats: Vec<f32> = [a, b, d, c]
+            .iter()
+            .map(|p| [2. * p.x as f32 / w - 1., 2. * p.y as f32 / h - 1.])
+            .flatten()
+            .collect();
+        unsafe {
+            self.gl.use_program(Some(self.solid_program));
+
+            let array = self.gl.create_vertex_array().unwrap();
+            self.gl.bind_vertex_array(Some(array));
+
+            let buffer = util::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
+            self.gl.vertex_attrib_pointer_f32(
+                0,
+                2,
+                glow::FLOAT,
+                false,
+                2 * size_of::<f32>() as i32,
+                0,
+            );
+            self.gl.enable_vertex_attrib_array(0);
+
+            self.gl.uniform_4_f32(
+                Some(&self.solid_program_color),
+                color.r as f32 / 255.,
+                color.g as f32 / 255.,
+                color.b as f32 / 255.,
+                color.a as f32 / 255.,
+            );
+
+            self.gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
+
+            self.gl.delete_buffer(buffer);
+            self.gl.delete_vertex_array(array);
+        }
+    }
+
+    pub fn draw_rectangle(&self, bounds: Bounds, color: Color) {
+        self.draw_quadrangle(
+            bounds.min,
+            bounds.min_max(),
+            bounds.max,
+            bounds.max_min(),
+            color,
+        )
     }
 }

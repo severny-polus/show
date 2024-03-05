@@ -1,5 +1,5 @@
 [workspace]
-members = ["examples/diffeq"]
+members = ["examples/diffeq", "examples/demo"]
 
 [package]
 name = "show"

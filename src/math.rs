@@ -165,11 +165,11 @@ impl Bounds {
         Self::from_points(p, p + v)
     }
 
-    pub fn top_left(self) -> Point {
+    pub fn min_max(self) -> Point {
         Point::new(self.min.x, self.max.y)
     }
 
-    pub fn bottom_right(self) -> Point {
+    pub fn max_min(self) -> Point {
         Point::new(self.max.x, self.min.y)
     }
 }

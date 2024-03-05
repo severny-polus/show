@@ -1,4 +1,6 @@
-use show::{views::Row, Command, Model, Program, Style, Subscriptions, View};
+use show::{
+    style::Border, views::Row, Color, Command, Indents, Model, Program, Style, Subscriptions, View,
+};
 
 fn main() {
     let mut program = Program::new().unwrap();
@@ -24,12 +26,14 @@ impl Model for App {
         Subscriptions::default()
     }
 
-    fn update(&mut self, message: Self::Message) {}
+    fn update(&mut self, _message: Self::Message) {}
 
     fn view(&self) -> Box<dyn View<Self::Message>> {
         Row::new(
             Style {
-                backdround: "#f4f4f4".into(),
+                margin: Indents::equal(8),
+                backdround: Color::black(),
+                border: Border::new(2, "#f4f4f4".into()),
                 ..Default::default()
             },
             vec![],
