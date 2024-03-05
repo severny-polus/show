@@ -21,7 +21,7 @@ impl Simulator {
             b,
             c,
             d,
-            dr: 0.001,
+            dr: 0.01,
             x0: 0.5,
             y0: 0.5,
         }
@@ -55,21 +55,24 @@ impl View for Simulator {
     }
 
     fn draw(&self, canvas: &mut show::Canvas) {
-        canvas.fill_rectangle(Color::black(), self.bounds);
         let w = self.bounds.width() as f64;
         let h = self.bounds.height() as f64;
         let mut x = self.x0;
         let mut y = self.y0;
-        let n = 1000usize;
-        for i in 0..n {
-            canvas.set_pixel(
+        let n: usize = 100;
+        let mut points: Vec<Point> = Vec::with_capacity(n);
+        let mut colors: Vec<Color> = Vec::with_capacity(n);
+        for i in 0..n+1 {
+            points.push(Point::new(
                 ((x * h + w) / 2.) as i32,
                 ((y * h + h) / 2.) as i32,
-                Color::white().with_alpha((255 * (n - i) / n) as u8),
-            );
+            ));
+            colors.push(Color::white().with_alpha((255 * (n - i) / n) as u8));
+
             x += (self.a * x + self.b * y) * self.dr;
             y += (self.c * x + self.d * y) * self.dr;
         }
+        canvas.draw_lines_gradient(points.as_slice(), colors.as_slice());
     }
 }
 
@@ -77,7 +80,7 @@ fn main() {
     let mut program = Program::new().unwrap();
     program
         .show("Differential equations", || {
-            Box::new(Simulator::new(1., -1., 2., -1.))
+            Box::new(Simulator::new(3., -2., 4., -1.))
         })
         .unwrap();
 }

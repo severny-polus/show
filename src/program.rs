@@ -31,7 +31,8 @@ impl Program {
         let mut glfw = glfw::init_no_callbacks()?;
         glfw.window_hint(WindowHint::ContextVersion(3, 3));
         glfw.window_hint(WindowHint::OpenGlProfile(OpenGlProfileHint::Core));
-        Ok(Self { glfw: glfw })
+        glfw.window_hint(WindowHint::Samples(Some(4))); // enables antialiasing
+        Ok(Self { glfw })
     }
 
     pub fn run<T: Model>(&mut self, title: &str, flags: T::Flags) -> Result<(), Error> {
@@ -59,9 +60,9 @@ impl Program {
         view.draw(&mut canvas);
 
         while !window.should_close() {
+            canvas.clear();
             view.draw(&mut canvas);
-            // canvas.clear(); // doesn't role
-            canvas.flush();
+            // canvas.draw_image();
 
             window.swap_buffers();
             self.glfw.poll_events();

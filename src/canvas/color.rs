@@ -1,9 +1,9 @@
 #[derive(Copy, Clone)]
 pub struct Color {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
 }
 
 const fn hex_to_u8(hex: u8) -> u8 {
@@ -76,6 +76,14 @@ impl Color {
 
     pub const fn transparent() -> Color {
         Self::new(0x00, 0x00, 0x00, 0x00)
+    }
+
+    pub fn to_vec3(self) -> [f32; 3] {
+        [self.r, self.g, self.b].map(|b| b as f32 / 255.)
+    }
+
+    pub fn to_vec4(self) -> [f32; 4] {
+        [self.r, self.g, self.b, self.a].map(|b| b as f32 / 255.)
     }
 }
 

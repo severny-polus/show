@@ -34,6 +34,10 @@ impl Point {
     pub fn div(self, c: i32) -> Self {
         Self::new(self.x / c, self.y / c)
     }
+
+    pub fn to_floats(self) -> [f32; 2] {
+        [self.x as f32, self.y as f32]
+    }
 }
 
 impl Default for Point {
