@@ -7,6 +7,7 @@ pub use color::Color;
 use core::ffi::c_void;
 use glow::{self, Buffer, Context, HasContext, Program, Texture, VertexArray};
 use image::{GenericImageView, ImageBuffer, Pixel, Rgba};
+use std::mem::size_of;
 
 const VERTEX_SHADER_SOURCE: &str = r#"
 	#version 330
@@ -183,36 +184,53 @@ impl Canvas {
 }
 
 impl Canvas {
-    pub fn draw_lines_gradient(&self, points: &[Point], colors: &[Color]) {
+    pub fn draw_lines_gradient(&self, points: &[(Point, Color)]) {
         let w = self.size.x as f32;
         let h = self.size.y as f32;
+        let n = points.len();
         let points: Vec<f32> = points
             .iter()
-            .map(|p| [2. * p.x as f32 / w - 1., 2. * p.y as f32 / h - 1.])
+            .map(|(p, c)| {
+                [
+                    2. * p.x as f32 / w - 1.,
+                    2. * p.y as f32 / h - 1.,
+                    c.r as f32 / 255.,
+                    c.g as f32 / 255.,
+                    c.b as f32 / 255.,
+                    c.a as f32 / 255.,
+                ]
+            })
             .flatten()
             .collect();
-        let colors: Vec<f32> = colors.iter().map(|c| c.to_vec4()).flatten().collect();
         unsafe {
             self.gl.use_program(Some(self.gradient_program));
 
             let array = self.gl.create_vertex_array().unwrap();
             self.gl.bind_vertex_array(Some(array));
 
-            let position = util::create_buffer(&self.gl, points.as_slice(), glow::STREAM_DRAW);
-            self.gl
-                .vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 0, 0);
+            let buffer = util::create_buffer(&self.gl, points.as_slice(), glow::STREAM_DRAW);
+            self.gl.vertex_attrib_pointer_f32(
+                0,
+                2,
+                glow::FLOAT,
+                false,
+                6 * size_of::<f32>() as i32,
+                0,
+            );
             self.gl.enable_vertex_attrib_array(0);
-
-            let color = util::create_buffer(&self.gl, colors.as_slice(), glow::STREAM_DRAW);
-            self.gl
-                .vertex_attrib_pointer_f32(1, 4, glow::FLOAT, false, 0, 0);
+            self.gl.vertex_attrib_pointer_f32(
+                1,
+                4,
+                glow::FLOAT,
+                false,
+                6 * size_of::<f32>() as i32,
+                2 * size_of::<f32>() as i32,
+            );
             self.gl.enable_vertex_attrib_array(1);
 
-            self.gl
-                .draw_arrays(glow::LINE_STRIP, 0, points.len() as i32 / 2);
+            self.gl.draw_arrays(glow::LINE_STRIP, 0, n as i32);
 
-            self.gl.delete_buffer(position);
-            self.gl.delete_buffer(color);
+            self.gl.delete_buffer(buffer);
             self.gl.delete_vertex_array(array);
         }
     }

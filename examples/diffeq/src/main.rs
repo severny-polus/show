@@ -60,19 +60,17 @@ impl View for Simulator {
         let mut x = self.x0;
         let mut y = self.y0;
         let n: usize = 100;
-        let mut points: Vec<Point> = Vec::with_capacity(n);
-        let mut colors: Vec<Color> = Vec::with_capacity(n);
-        for i in 0..n+1 {
-            points.push(Point::new(
-                ((x * h + w) / 2.) as i32,
-                ((y * h + h) / 2.) as i32,
+        let mut points: Vec<(Point, Color)> = Vec::with_capacity(n);
+        for i in 0..n {
+            points.push((
+                Point::new(((x * h + w) / 2.) as i32, ((y * h + h) / 2.) as i32),
+                Color::white().with_alpha((255 * (n - i) / n) as u8),
             ));
-            colors.push(Color::white().with_alpha((255 * (n - i) / n) as u8));
 
             x += (self.a * x + self.b * y) * self.dr;
             y += (self.c * x + self.d * y) * self.dr;
         }
-        canvas.draw_lines_gradient(points.as_slice(), colors.as_slice());
+        canvas.draw_lines_gradient(points.as_slice());
     }
 }
 
