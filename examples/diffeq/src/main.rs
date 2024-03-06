@@ -70,7 +70,7 @@ impl View for Simulator {
             x += (self.a * x + self.b * y) * self.dr;
             y += (self.c * x + self.d * y) * self.dr;
         }
-        canvas.draw_lines_gradient(points.as_slice());
+        canvas.draw_points(points.as_slice());
     }
 }
 

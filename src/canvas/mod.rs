@@ -9,8 +9,7 @@ use crate::{
 };
 pub use color::Color;
 use core::ffi::c_void;
-use glow::{self, Buffer, Context, HasContext, Program, Texture, UniformLocation, VertexArray};
-use image::{GenericImageView, ImageBuffer, Pixel, Rgba};
+use glow::{self, Context, HasContext, Program, UniformLocation};
 use std::mem::size_of;
 
 const VERTEX_SHADER_SOURCE: &str = r#"
@@ -60,11 +59,6 @@ impl Canvas {
             gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA); // for transparency
             gl.enable(glow::MULTISAMPLE); // for antialiasing
 
-            let program = util::create_program(&gl, VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE)?;
-            gl.use_program(Some(program));
-            let (vao, vbos) = util::create_vertex_array(&gl)?;
-            let texture = util::create_texture(&gl)?;
-
             let solid_program = util::create_program(
                 &gl,
                 solid::VERTEX_SHADER_SOURCE,
@@ -105,6 +99,54 @@ impl Canvas {
 }
 
 impl Canvas {
+    pub fn draw_points(&self, points: &[(PointF32, Color)]) {
+        let floats: Vec<f32> = points
+            .iter()
+            .map(|(p, c)| {
+                [
+                    2. * p.x() / self.size.x() - 1.,
+                    2. * p.y() / self.size.y() - 1.,
+                    c.r,
+                    c.g,
+                    c.b,
+                    c.a,
+                ]
+            })
+            .flatten()
+            .collect();
+        unsafe {
+            self.gl.use_program(Some(self.gradient_program));
+
+            let array = self.gl.create_vertex_array().unwrap();
+            self.gl.bind_vertex_array(Some(array));
+
+            let buffer = util::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
+            self.gl.vertex_attrib_pointer_f32(
+                0,
+                2,
+                glow::FLOAT,
+                false,
+                6 * size_of::<f32>() as i32,
+                0,
+            );
+            self.gl.enable_vertex_attrib_array(0);
+            self.gl.vertex_attrib_pointer_f32(
+                1,
+                4,
+                glow::FLOAT,
+                false,
+                6 * size_of::<f32>() as i32,
+                2 * size_of::<f32>() as i32,
+            );
+            self.gl.enable_vertex_attrib_array(1);
+
+            self.gl.draw_arrays(glow::POINTS, 0, points.len() as i32);
+
+            self.gl.delete_buffer(buffer);
+            self.gl.delete_vertex_array(array);
+        }
+    }
+
     pub fn draw_lines(&self, points: &[Point], color: Color) {
         let floats: Vec<f32> = points
             .iter()
