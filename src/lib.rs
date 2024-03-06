@@ -1,18 +1,20 @@
+#![feature(const_fn_floating_point_arithmetic)]
+
 pub mod canvas;
 pub mod command;
 pub mod event;
 pub mod math;
 pub mod model;
-pub mod view;
 pub mod program;
+pub mod view;
 
 pub use canvas::*;
 pub use command::*;
 pub use event::*;
 pub use math::*;
 pub use model::*;
-pub use view::*;
 pub use program::*;
+pub use view::*;
 
 #[cfg(test)]
 mod tests {

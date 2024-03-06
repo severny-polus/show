@@ -1,20 +1,20 @@
-use show::{views::Row, Bounds, Color, Event, Length, Point, Program, Style, View};
+use show::{views::Row, Bounds, Color, Event, Length, Point, PointF32, Program, Style, View};
 
 // vx = ax + by
 // vy = cx + dy
 struct Simulator {
     bounds: Bounds,
-    a: f64,
-    b: f64,
-    c: f64,
-    d: f64,
-    dr: f64,
-    x0: f64,
-    y0: f64,
+    a: f32,
+    b: f32,
+    c: f32,
+    d: f32,
+    dr: f32,
+    x0: f32,
+    y0: f32,
 }
 
 impl Simulator {
-    fn new(a: f64, b: f64, c: f64, d: f64) -> Self {
+    fn new(a: f32, b: f32, c: f32, d: f32) -> Self {
         Self {
             bounds: Bounds::zero(),
             a,
@@ -42,12 +42,12 @@ impl View for Simulator {
     }
 
     fn process(&mut self, event: show::Event) -> Option<()> {
-        let w = self.bounds.width() as f64;
-        let h = self.bounds.height() as f64;
+        let w = self.bounds.width() as f32;
+        let h = self.bounds.height() as f32;
         match event {
             Event::CursorPos(x, y) => {
-                self.x0 = (2. * x - w) / h;
-                self.y0 = -(2. * y - h) / h;
+                self.x0 = (2. * x as f32 - w) / h;
+                self.y0 = -(2. * y as f32 - h) / h;
             }
             _ => {}
         }
@@ -55,16 +55,16 @@ impl View for Simulator {
     }
 
     fn draw(&self, canvas: &mut show::Canvas) {
-        let w = self.bounds.width() as f64;
-        let h = self.bounds.height() as f64;
+        let w = self.bounds.width() as f32;
+        let h = self.bounds.height() as f32;
         let mut x = self.x0;
         let mut y = self.y0;
         let n: usize = 100;
-        let mut points: Vec<(Point, Color)> = Vec::with_capacity(n);
+        let mut points: Vec<(PointF32, Color)> = Vec::with_capacity(n);
         for i in 0..n {
             points.push((
-                Point::new(((x * h + w) / 2.) as i32, ((y * h + h) / 2.) as i32),
-                Color::white().with_alpha((255 * (n - i) / n) as u8),
+                PointF32::new((x * h + w) / 2., (y * h + h) / 2.),
+                Color::white().with_alpha((n - i) as f32 / n as f32),
             ));
 
             x += (self.a * x + self.b * y) * self.dr;

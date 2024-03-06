@@ -26,7 +26,9 @@ impl Model for App {
         Subscriptions::default()
     }
 
-    fn update(&mut self, _message: Self::Message) {}
+    fn update(&mut self, _message: Self::Message) -> Command<Self::Message> {
+        Command::None
+    }
 
     fn view(&self) -> Box<dyn View<Self::Message>> {
         Row::new(

@@ -75,7 +75,14 @@ impl Program {
                     }
                     _ => (),
                 }
-                view.process(event);
+                let message = view.process(event);
+                let command = message.map_or(Command::None, |message| model.update(message));
+                match command {
+                    Command::Update => {
+                        view = model.view();
+                    }
+                    _ => {}
+                };
             }
         }
         Ok(())
@@ -98,7 +105,9 @@ impl Model for EmptyModel {
         Subscriptions::default()
     }
 
-    fn update(&mut self, _message: Self::Message) {}
+    fn update(&mut self, _message: Self::Message) -> Command<Self::Message> {
+        Command::None
+    }
 
     fn view(&self) -> Box<dyn View<Self::Message>> {
         (self.view)()

@@ -2,9 +2,7 @@ pub mod style;
 pub mod util;
 pub mod views;
 
-use crate::canvas::Canvas;
-use crate::math::{Bounds, Point};
-use crate::Event;
+use crate::{Bounds, Canvas, Event, Point};
 
 pub use self::util::{Indents, Length, Orientation};
 pub use style::Style;

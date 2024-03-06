@@ -1,5 +1,3 @@
-
-
 pub type Event = glfw::WindowEvent;
 
 pub struct Subscriptions<M> {
@@ -7,25 +5,29 @@ pub struct Subscriptions<M> {
 }
 
 impl<M> Subscriptions<M> {
-    fn new(filter: fn(Event) -> Option<M>) -> Self {
+    pub fn new(filter: fn(Event) -> Option<M>) -> Self {
         Self {
             filters: vec![filter],
         }
     }
 
-    fn combine(subscriptions: &mut [Self]) -> Self {
-        let mut filters = Vec::new();
-        for s in subscriptions {
-            filters.append(&mut s.filters);
+    pub fn empty() -> Self {
+        Self { filters: vec![] }
+    }
+
+    pub fn combine(subscriptions: &[Self]) -> Self {
+        Self {
+            filters: subscriptions
+                .iter()
+                .map(|s| s.filters.iter().map(|&f| f))
+                .flatten()
+                .collect(),
         }
-        Self { filters }
     }
 }
 
 impl<M> Default for Subscriptions<M> {
     fn default() -> Self {
-        Self {
-            filters: Vec::new(),
-        }
+        Self::empty()
     }
 }

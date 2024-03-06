@@ -1,4 +1,5 @@
 pub enum Command<M> {
-    C(M),
+    Phantom(M),
+    Update,
     None,
 }

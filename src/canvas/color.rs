@@ -1,9 +1,9 @@
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy)]
 pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
 }
 
 const fn hex_to_u8(hex: u8) -> u8 {
@@ -15,12 +15,12 @@ const fn hex_to_u8(hex: u8) -> u8 {
     }
 }
 
-const fn hex2_to_u8(a: u8, b: u8) -> u8 {
-    16 * hex_to_u8(a) + hex_to_u8(b)
+const fn hex2_to_f32(a: u8, b: u8) -> f32 {
+    (16 * hex_to_u8(a) + hex_to_u8(b)) as f32 / 255.
 }
 
 impl Color {
-    pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+    pub const fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 
@@ -29,53 +29,43 @@ impl Color {
         let i: usize = if h[0] == b'#' { 1 } else { 0 };
         match h.len() - i {
             8 => Self::new(
-                hex2_to_u8(h[i + 0], h[i + 1]),
-                hex2_to_u8(h[i + 2], h[i + 3]),
-                hex2_to_u8(h[i + 4], h[i + 5]),
-                hex2_to_u8(h[i + 6], h[i + 7]),
+                hex2_to_f32(h[i + 0], h[i + 1]),
+                hex2_to_f32(h[i + 2], h[i + 3]),
+                hex2_to_f32(h[i + 4], h[i + 5]),
+                hex2_to_f32(h[i + 6], h[i + 7]),
             ),
             6 => Self::new(
-                hex2_to_u8(h[i + 0], h[i + 1]),
-                hex2_to_u8(h[i + 2], h[i + 3]),
-                hex2_to_u8(h[i + 4], h[i + 5]),
-                0xFF,
+                hex2_to_f32(h[i + 0], h[i + 1]),
+                hex2_to_f32(h[i + 2], h[i + 3]),
+                hex2_to_f32(h[i + 4], h[i + 5]),
+                1.,
             ),
             _ => panic!("incorrect hex string length"),
         }
     }
 
-    pub const fn from_array(v: [u8; 4]) -> Self {
+    pub const fn from_array(v: [f32; 4]) -> Self {
         Self::new(v[0], v[1], v[2], v[3])
     }
 
-    pub fn to_array(self) -> [u8; 4] {
+    pub fn to_array(self) -> [f32; 4] {
         [self.r, self.g, self.b, self.a]
     }
 
-    pub fn blend(self, other: Self) -> Self {
-        let a = other.a as u16;
-        Self::new(
-            ((a * other.r as u16 + (255 - a) * self.r as u16) / 255) as u8,
-            ((a * other.g as u16 + (255 - a) * self.g as u16) / 255) as u8,
-            ((a * other.b as u16 + (255 - a) * self.b as u16) / 255) as u8,
-            self.a,
-        )
-    }
-
-    pub const fn with_alpha(self, alpha: u8) -> Self {
+    pub const fn with_alpha(self, alpha: f32) -> Self {
         Self::new(self.r, self.g, self.b, alpha)
     }
 
     pub const fn white() -> Color {
-        Self::new(0xFF, 0xFF, 0xFF, 0xFF)
+        Self::new(1., 1., 1., 1.)
     }
 
     pub const fn black() -> Color {
-        Self::new(0x00, 0x00, 0x00, 0xFF)
+        Self::new(0., 0., 0., 1.)
     }
 
     pub const fn transparent() -> Color {
-        Self::new(0x00, 0x00, 0x00, 0x00)
+        Self::new(0., 0., 0., 0.)
     }
 
     pub fn to_vec3(self) -> [f32; 3] {

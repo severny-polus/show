@@ -1,9 +1,12 @@
 pub mod color;
 pub mod gradient;
 pub mod solid;
-pub mod util;
+mod util;
 
-use crate::math::{Bounds, Point};
+use crate::{
+    math::{Bounds, Point},
+    PointF32,
+};
 pub use color::Color;
 use core::ffi::c_void;
 use glow::{self, Buffer, Context, HasContext, Program, Texture, UniformLocation, VertexArray};
@@ -34,9 +37,8 @@ const FRAGMENT_SHADER_SOURCE: &str = r#"
 pub struct Canvas {
     gl: Context,
 
-    size: Point,
+    size: PointF32,
     dpi: f32,
-    image: ImageBuffer<Rgba<u8>, Vec<u8>>,
 
     solid_program: Program,
     solid_program_color: UniformLocation,
@@ -79,9 +81,8 @@ impl Canvas {
             let mut canvas = Self {
                 gl,
 
-                size: Point::zero(),
+                size: PointF32::zero(),
                 dpi,
-                image: ImageBuffer::new(0, 0),
 
                 solid_program,
                 solid_program_color,
@@ -94,58 +95,25 @@ impl Canvas {
     }
 
     pub fn set_size(&mut self, size: Point) {
-        self.size = size;
-        unsafe {
-            self.gl.viewport(0, 0, size.x, size.y);
-            // self.gl.tex_storage_2d(glow::TEXTURE_2D, 1, glow::RGBA8, size.x, size.y); // doesn't work
-            self.gl.tex_image_2d(
-                glow::TEXTURE_2D,
-                0,
-                glow::RGBA as i32,
-                size.x,
-                size.y,
-                0,
-                glow::RGBA,
-                glow::UNSIGNED_BYTE,
-                None,
-            );
-        };
-        self.image = ImageBuffer::new(size.x as u32, size.y as u32);
+        self.size = size.to_f32();
+        unsafe { self.gl.viewport(0, 0, size.x, size.y) };
     }
 
     pub fn clear(&self) {
         unsafe { self.gl.clear(glow::COLOR_BUFFER_BIT) };
     }
-
-    pub fn draw_image(&self) {
-        unsafe {
-            self.gl.tex_sub_image_2d(
-                glow::TEXTURE_2D,
-                0,
-                0,
-                0,
-                self.image.width() as i32,
-                self.image.height() as i32,
-                glow::RGBA,
-                glow::UNSIGNED_BYTE,
-                glow::PixelUnpackData::Slice(self.image.as_raw().as_slice()),
-            );
-            self.gl.draw_arrays(glow::TRIANGLES, 0, 6);
-        };
-    }
-}
-
-fn to_screen(value: i32, max: f32) -> f32 {
-    2. * value as f32 / max - 1.
 }
 
 impl Canvas {
     pub fn draw_lines(&self, points: &[Point], color: Color) {
-        let w = self.size.x as f32;
-        let h = self.size.y as f32;
         let floats: Vec<f32> = points
             .iter()
-            .map(|p| [2. * p.x as f32 / w - 1., 2. * p.y as f32 / h - 1.])
+            .map(|p| {
+                [
+                    2. * p.x as f32 / self.size.x() - 1.,
+                    2. * p.y as f32 / self.size.y() - 1.,
+                ]
+            })
             .flatten()
             .collect();
         unsafe {
@@ -167,10 +135,10 @@ impl Canvas {
 
             self.gl.uniform_4_f32(
                 Some(&self.solid_program_color),
-                color.r as f32 / 255.,
-                color.g as f32 / 255.,
-                color.b as f32 / 255.,
-                color.a as f32 / 255.,
+                color.r,
+                color.g,
+                color.b,
+                color.a,
             );
 
             self.gl
@@ -181,19 +149,17 @@ impl Canvas {
         }
     }
 
-    pub fn draw_lines_gradient(&self, points: &[(Point, Color)]) {
-        let w = self.size.x as f32;
-        let h = self.size.y as f32;
+    pub fn draw_lines_gradient(&self, points: &[(PointF32, Color)]) {
         let floats: Vec<f32> = points
             .iter()
             .map(|(p, c)| {
                 [
-                    2. * p.x as f32 / w - 1.,
-                    2. * p.y as f32 / h - 1.,
-                    c.r as f32 / 255.,
-                    c.g as f32 / 255.,
-                    c.b as f32 / 255.,
-                    c.a as f32 / 255.,
+                    2. * p.x() / self.size.x() - 1.,
+                    2. * p.y() / self.size.y() - 1.,
+                    c.r,
+                    c.g,
+                    c.b,
+                    c.a,
                 ]
             })
             .flatten()
@@ -232,12 +198,22 @@ impl Canvas {
         }
     }
 
-    pub fn draw_quadrangle(&self, a: Point, b: Point, c: Point, d: Point, color: Color) {
-        let w = self.size.x as f32;
-        let h = self.size.y as f32;
+    pub fn draw_quadrangle(
+        &self,
+        a: PointF32,
+        b: PointF32,
+        c: PointF32,
+        d: PointF32,
+        color: Color,
+    ) {
         let floats: Vec<f32> = [a, b, d, c]
             .iter()
-            .map(|p| [2. * p.x as f32 / w - 1., 2. * p.y as f32 / h - 1.])
+            .map(|p| {
+                [
+                    2. * p.x() / self.size.x() - 1.,
+                    2. * p.y() / self.size.y() - 1.,
+                ]
+            })
             .flatten()
             .collect();
         unsafe {
@@ -259,10 +235,10 @@ impl Canvas {
 
             self.gl.uniform_4_f32(
                 Some(&self.solid_program_color),
-                color.r as f32 / 255.,
-                color.g as f32 / 255.,
-                color.b as f32 / 255.,
-                color.a as f32 / 255.,
+                color.r,
+                color.g,
+                color.b,
+                color.a,
             );
 
             self.gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
@@ -274,10 +250,10 @@ impl Canvas {
 
     pub fn draw_rectangle(&self, bounds: Bounds, color: Color) {
         self.draw_quadrangle(
-            bounds.min,
-            bounds.min_max(),
-            bounds.max,
-            bounds.max_min(),
+            bounds.min.to_f32(),
+            bounds.min_max().to_f32(),
+            bounds.max.to_f32(),
+            bounds.max_min().to_f32(),
             color,
         )
     }

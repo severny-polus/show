@@ -38,6 +38,10 @@ impl Point {
     pub fn to_floats(self) -> [f32; 2] {
         [self.x as f32, self.y as f32]
     }
+
+    pub fn to_f32(self) -> PointF32 {
+        PointF32::new(self.x as f32, self.y as f32)
+    }
 }
 
 impl Default for Point {
@@ -78,6 +82,55 @@ fn min_max(a: i32, b: i32) -> (i32, i32) {
         (a, b)
     } else {
         (b, a)
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct Interval {
+    pub min: i32,
+    pub max: i32,
+}
+
+impl Interval {
+    pub fn from_bounds(min: i32, max: i32) -> Self {
+        Self { min, max }
+    }
+
+    pub fn fixed(self) -> Self {
+        let (min, max) = min_max(self.min, self.max);
+        Self::from_bounds(min, max)
+    }
+
+    pub fn from_size(origin: i32, size: i32) -> Self {
+        Self::from_bounds(origin, origin + size)
+    }
+
+    pub fn zero() -> Self {
+        Self::from_bounds(0, 0)
+    }
+
+    pub fn length(self) -> i32 {
+        self.max - self.min
+    }
+
+    pub fn add(self, v: i32) -> Self {
+        Self::from_bounds(self.min + v, self.max + v)
+    }
+
+    pub fn contains(self, c: i32) -> bool {
+        self.min <= c && c < self.max
+    }
+
+    pub fn center(self) -> i32 {
+        (self.min + self.max) / 2
+    }
+
+    pub fn shrink(self, v: i32) -> Self {
+        Self::from_bounds(self.min + v, self.max - v)
+    }
+
+    pub fn range(self) -> Range<i32> {
+        self.min..self.max
     }
 }
 
@@ -180,51 +233,24 @@ impl Default for Bounds {
     }
 }
 
-#[derive(Copy, Clone)]
-pub struct Interval {
-    pub min: i32,
-    pub max: i32,
+pub struct PointF32 {
+    values: [f32; 2],
 }
 
-impl Interval {
-    pub fn from_bounds(min: i32, max: i32) -> Self {
-        Self { min, max }
+impl PointF32 {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self { values: [x, y] }
     }
 
-    pub fn fixed(self) -> Self {
-        let (min, max) = min_max(self.min, self.max);
-        Self::from_bounds(min, max)
+    pub fn x(&self) -> f32 {
+        self.values[0]
     }
 
-    pub fn from_size(origin: i32, size: i32) -> Self {
-        Self::from_bounds(origin, origin + size)
+    pub fn y(&self) -> f32 {
+        self.values[1]
     }
 
     pub fn zero() -> Self {
-        Self::from_bounds(0, 0)
-    }
-
-    pub fn length(self) -> i32 {
-        self.max - self.min
-    }
-
-    pub fn add(self, v: i32) -> Self {
-        Self::from_bounds(self.min + v, self.max + v)
-    }
-
-    pub fn contains(self, c: i32) -> bool {
-        self.min <= c && c < self.max
-    }
-
-    pub fn center(self) -> i32 {
-        (self.min + self.max) / 2
-    }
-
-    pub fn shrink(self, v: i32) -> Self {
-        Self::from_bounds(self.min + v, self.max - v)
-    }
-
-    pub fn range(self) -> Range<i32> {
-        self.min..self.max
+        Self { values: [0., 0.] }
     }
 }
