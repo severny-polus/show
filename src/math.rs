@@ -233,6 +233,7 @@ impl Default for Bounds {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct PointF32 {
     values: [f32; 2],
 }
@@ -252,5 +253,41 @@ impl PointF32 {
 
     pub fn zero() -> Self {
         Self { values: [0., 0.] }
+    }
+
+    pub fn mul(self, c: f32) -> Self {
+        Self {
+            values: self.values.map(|x| x * c),
+        }
+    }
+}
+
+impl Neg for PointF32 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self::new(-self.values[0], -self.values[1])
+    }
+}
+
+impl Add for PointF32 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.values[0] + rhs.values[0],
+            self.values[1] + rhs.values[1],
+        )
+    }
+}
+
+impl Sub for PointF32 {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.values[0] - rhs.values[0],
+            self.values[1] - rhs.values[1],
+        )
     }
 }

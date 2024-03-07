@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, rc::Rc};
 
-use crate::{Bounds, Canvas, Command, Length, Model, Point, Subscriptions, View};
+use crate::{Bounds, Canvas, Command, Event, Length, Model, Point, Subscriptions, View};
 use glfw::{Context, InitError, OpenGlProfileHint, WindowEvent, WindowHint, WindowMode};
 
 pub struct Program {
@@ -65,6 +65,7 @@ impl Program {
             // canvas.draw_image();
 
             window.swap_buffers();
+            view.process(Event::Frame);
             self.glfw.poll_events();
             for (_, event) in glfw::flush_messages(&events) {
                 match event {
@@ -75,26 +76,29 @@ impl Program {
                     }
                     _ => (),
                 }
-                let message = view.process(event);
-                let command = message.map_or(Command::None, |message| model.update(message));
-                match command {
-                    Command::Update => {
-                        view = model.view();
+                match view.process(Event::Window(event)) {
+                    Some(message) => {
+                        match model.update(message) {
+                            Command::Update => {
+                                view = model.view();
+                            }
+                            _ => {}
+                        };
                     }
-                    _ => {}
-                };
+                    None => {}
+                }
             }
         }
         Ok(())
     }
 }
 
-struct EmptyModel {
-    view: fn() -> Box<dyn View<()>>,
+struct EmptyModel<V: View> {
+    view: fn() -> V,
 }
 
-impl Model for EmptyModel {
-    type Flags = fn() -> Box<dyn View<()>>;
+impl<V: View + 'static> Model for EmptyModel<V> {
+    type Flags = fn() -> V;
     type Message = ();
 
     fn init(view: Self::Flags) -> (Self, Command<Self::Message>) {
@@ -110,12 +114,12 @@ impl Model for EmptyModel {
     }
 
     fn view(&self) -> Box<dyn View<Self::Message>> {
-        (self.view)()
+        Box::new((self.view)())
     }
 }
 
 impl Program {
-    pub fn show(&mut self, title: &str, view: fn() -> Box<dyn View<()>>) -> Result<(), Error> {
-        self.run::<EmptyModel>(title, view)
+    pub fn show<V: View + 'static>(&mut self, title: &str, view: fn() -> V) -> Result<(), Error> {
+        self.run::<EmptyModel<V>>(title, view)
     }
 }

@@ -147,13 +147,13 @@ impl Canvas {
         }
     }
 
-    pub fn draw_lines(&self, points: &[Point], color: Color) {
+    pub fn draw_lines(&self, points: &[PointF32], color: Color) {
         let floats: Vec<f32> = points
             .iter()
             .map(|p| {
                 [
-                    2. * p.x as f32 / self.size.x() - 1.,
-                    2. * p.y as f32 / self.size.y() - 1.,
+                    2. * p.x() / self.size.x() - 1.,
+                    2. * p.y() / self.size.y() - 1.,
                 ]
             })
             .flatten()
