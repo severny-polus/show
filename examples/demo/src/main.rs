@@ -1,10 +1,10 @@
 use show::{
-    style::Border, views::Row, Color, Command, Indents, Model, Program, Style, Subscriptions, View,
+    style::Border, views::Row, Color, Command, Indents, Model, Program, Size, Style, Subscriptions, View
 };
 
 fn main() {
     let mut program = Program::new().unwrap();
-    program.run::<App>("hello", ()).unwrap();
+    program.run::<App>(Size::default(), "hello", ()).unwrap();
 }
 
 struct App {}

@@ -1,11 +1,10 @@
 use rand::prelude::*;
 use show::{
-    views::Row, Action, Bounds, Color, Event, Length, MouseButton, Point, PointF32, Program, Style,
-    View, WindowEvent,
+    views::Row, Action, Bounds, Color, Event, Length, MouseButton, Point, PointF32, Program, Size,
+    Style, View, WindowEvent,
 };
 
 const DT: f32 = 0.005; // шаг времени
-const SCALE: f32 = 3.; // ордината, соответствующая верхней границе экрана
 const STEPS: usize = 5000;
 const N: usize = 200; // количество пылинок за кадр
 const T: usize = 120; // продолжительность жизни пылинки в кадрах
@@ -14,10 +13,8 @@ const T: usize = 120; // продолжительность жизни пыли�
 // vy = cx + dy
 struct Simulator {
     bounds: Bounds,
-    a: f32,
-    b: f32,
-    c: f32,
-    d: f32,
+    velocity: fn(PointF32) -> PointF32,
+    scale: f32,
     p0: PointF32,
     points: Vec<(PointF32, usize)>,
     rng: ThreadRng,
@@ -26,26 +23,17 @@ struct Simulator {
 }
 
 impl Simulator {
-    fn new(a: f32, b: f32, c: f32, d: f32) -> Self {
+    fn new(velocity: fn(PointF32) -> PointF32, scale: f32) -> Self {
         Self {
             bounds: Bounds::zero(),
-            a,
-            b,
-            c,
-            d,
+            velocity,
+            scale,
             p0: PointF32::zero(),
             points: Vec::new(),
             rng: rand::thread_rng(),
             pressed: false,
             eigenvectors: None,
         }
-    }
-
-    fn velocity(&self, p: PointF32) -> PointF32 {
-        PointF32::new(
-            f32::ln(5. - 2. * p.x() - 2. * p.y()),
-            f32::exp(p.x() * p.y()) - 1.,
-        )
     }
 
     fn eigenvectors(a: f32, b: f32, c: f32, d: f32) -> Option<[PointF32; 2]> {
@@ -94,15 +82,15 @@ impl View for Simulator {
                         if t >= T {
                             None
                         } else {
-                            Some((p + self.velocity(p).mul(DT), t + 1))
+                            Some((p + (self.velocity)(p).mul(DT), t + 1))
                         }
                     })
                     .collect();
                 for _ in 0..N {
                     self.points.push((
                         PointF32::new(
-                            (self.rng.gen::<f32>() * 2. - 1.) * SCALE * 2. * w / h,
-                            (self.rng.gen::<f32>() * 2. - 1.) * SCALE * 2. * w / h,
+                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * 2. * w / h,
+                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * 2. * w / h,
                         ),
                         0,
                     ))
@@ -110,7 +98,8 @@ impl View for Simulator {
             }
             Event::Window(event) => match event {
                 WindowEvent::CursorPos(x, y) => {
-                    self.p0 = PointF32::new(2. * x as f32 - w, h - 2. * y as f32).mul(SCALE / h);
+                    self.p0 =
+                        PointF32::new(2. * x as f32 - w, h - 2. * y as f32).mul(self.scale / h);
                 }
                 WindowEvent::MouseButton(button, action, _modifiers) => {
                     if button == MouseButton::Button1 {
@@ -151,7 +140,7 @@ impl View for Simulator {
             .points
             .iter()
             .map(|&(p, t)| {
-                let p = p.mul(h / SCALE);
+                let p = p.mul(h / self.scale);
                 (
                     PointF32::new(p.x() + w, p.y() + h).mul(0.5),
                     Color::white().with_alpha(1. - (2. * t as f32 / T as f32 - 1.).powi(2)),
@@ -164,13 +153,13 @@ impl View for Simulator {
             let mut p = self.p0;
             let mut lines: Vec<(PointF32, Color)> = Vec::with_capacity(STEPS);
             for i in 0..STEPS {
-                let point = p.mul(h / SCALE);
+                let point = p.mul(h / self.scale);
                 lines.push((
                     PointF32::new(point.x() + w, point.y() + h).mul(0.5),
                     Color::white().with_alpha((STEPS - i) as f32 / STEPS as f32),
                 ));
 
-                p = p + self.velocity(p).mul(DT);
+                p = p + (self.velocity)(p).mul(DT);
             }
             canvas.draw_lines_gradient(lines.as_slice());
         }
@@ -180,8 +169,16 @@ impl View for Simulator {
 fn main() {
     let mut program = Program::new().unwrap();
     program
-        .show("Differential equations", || {
-            Simulator::new(-4., -9., 3., 8.)
+        .show(Size::Max, "Differential equations", || {
+            Simulator::new(
+                |p| {
+                    PointF32::new(
+                        3. * p.x().powi(2) - p.x() * p.y() + 2.,
+                        p.x().powi(2) - p.x() - 2.,
+                    )
+                },
+                8.,
+            )
         })
         .unwrap();
 }

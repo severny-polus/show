@@ -26,6 +26,17 @@ impl From<String> for Error {
     }
 }
 
+pub enum Size {
+    Pixels(u32, u32),
+    Max,
+}
+
+impl Default for Size {
+    fn default() -> Self {
+        Self::Pixels(600, 400)
+    }
+}
+
 impl Program {
     pub fn new() -> Result<Self, Error> {
         let mut glfw = glfw::init_no_callbacks()?;
@@ -35,10 +46,14 @@ impl Program {
         Ok(Self { glfw })
     }
 
-    pub fn run<T: Model>(&mut self, title: &str, flags: T::Flags) -> Result<(), Error> {
+    pub fn run<T: Model>(&mut self, size: Size, title: &str, flags: T::Flags) -> Result<(), Error> {
+        let (width, height) = match size {
+            Size::Pixels(width, height) => (width, height),
+            Size::Max => (600, 400),
+        };
         let (mut window, events) = self
             .glfw
-            .create_window(600, 400, title, WindowMode::Windowed)
+            .create_window(width, height, title, WindowMode::Windowed)
             .ok_or(Error::WindowCreationError)?;
 
         window.set_mouse_button_polling(true);
@@ -119,7 +134,12 @@ impl<V: View + 'static> Model for EmptyModel<V> {
 }
 
 impl Program {
-    pub fn show<V: View + 'static>(&mut self, title: &str, view: fn() -> V) -> Result<(), Error> {
-        self.run::<EmptyModel<V>>(title, view)
+    pub fn show<V: View + 'static>(
+        &mut self,
+        size: Size,
+        title: &str,
+        view: fn() -> V,
+    ) -> Result<(), Error> {
+        self.run::<EmptyModel<V>>(size, title, view)
     }
 }
