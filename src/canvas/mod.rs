@@ -1,7 +1,8 @@
 pub mod color;
-pub mod gradient;
-pub mod solid;
-mod util;
+pub mod draw;
+mod gl;
+mod gradient;
+mod solid;
 
 use crate::{
     math::{Bounds, Point},
@@ -11,27 +12,6 @@ pub use color::Color;
 use core::ffi::c_void;
 use glow::{self, Context, HasContext, Program, UniformLocation};
 use std::mem::size_of;
-
-const VERTEX_SHADER_SOURCE: &str = r#"
-	#version 330
-	layout (location = 0) in vec2 inPosition;
-	layout (location = 1) in vec2 inTexCoord;
-	out vec2 texCoord;
-	void main() {
-		gl_Position = vec4(inPosition, 0, 1);
-		texCoord = inTexCoord;
-	}
-"#;
-
-const FRAGMENT_SHADER_SOURCE: &str = r#"
-	#version 330
-	uniform sampler2D tex;
-	in vec2 texCoord;
-	out vec4 FragColor;
-	void main() {
-		FragColor = texture(tex, texCoord);
-	}
-"#;
 
 pub struct Canvas {
     gl: Context,
@@ -59,14 +39,14 @@ impl Canvas {
             gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA); // for transparency
             gl.enable(glow::MULTISAMPLE); // for antialiasing
 
-            let solid_program = util::create_program(
+            let solid_program = gl::create_program(
                 &gl,
                 solid::VERTEX_SHADER_SOURCE,
                 solid::FRAGMENT_SHADER_SOURCE,
             )?;
             let solid_program_color = gl.get_uniform_location(solid_program, "color").unwrap();
 
-            let gradient_program = util::create_program(
+            let gradient_program = gl::create_program(
                 &gl,
                 gradient::VERTEX_SHADER_SOURCE,
                 gradient::FRAGMENT_SHADER_SOURCE,
@@ -120,7 +100,7 @@ impl Canvas {
             let array = self.gl.create_vertex_array().unwrap();
             self.gl.bind_vertex_array(Some(array));
 
-            let buffer = util::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
+            let buffer = gl::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
             self.gl.vertex_attrib_pointer_f32(
                 0,
                 2,
@@ -164,7 +144,7 @@ impl Canvas {
             let array = self.gl.create_vertex_array().unwrap();
             self.gl.bind_vertex_array(Some(array));
 
-            let buffer = util::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
+            let buffer = gl::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
             self.gl.vertex_attrib_pointer_f32(
                 0,
                 2,
@@ -212,7 +192,7 @@ impl Canvas {
             let array = self.gl.create_vertex_array().unwrap();
             self.gl.bind_vertex_array(Some(array));
 
-            let buffer = util::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
+            let buffer = gl::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
             self.gl.vertex_attrib_pointer_f32(
                 0,
                 2,
@@ -264,7 +244,7 @@ impl Canvas {
             let array = self.gl.create_vertex_array().unwrap();
             self.gl.bind_vertex_array(Some(array));
 
-            let buffer = util::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
+            let buffer = gl::create_buffer(&self.gl, floats.as_slice(), glow::STREAM_DRAW);
             self.gl.vertex_attrib_pointer_f32(
                 0,
                 2,

@@ -1,6 +1,6 @@
 use std::{mem::size_of, slice::from_raw_parts};
 
-use glow::{Buffer, Context, HasContext, Program, Shader, Texture, VertexArray};
+use glow::{Buffer, Context, HasContext, Program, Shader};
 
 pub(super) unsafe fn create_shader(
     gl: &Context,
