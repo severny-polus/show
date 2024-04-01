@@ -1,15 +1,15 @@
 use rand::prelude::*;
 use show::{
-    views::Row, Action, Bounds, Canvas, Color, Event, Length, MouseButton, Point, PointF32,
-    Program, Size, Style, View, WindowEvent,
+    Action, Bounds, Canvas, Color, Event, Length, MouseButton, PointF32, Program, Size, View,
+    WindowEvent,
 };
 
 const DT: f32 = 0.005; // шаг времени
 const DS: f32 = 2. * DT; // шаг пути
 const TRAIL_LENGTH: usize = 50; // длина пути в шагах
-const N: usize = 1000; // количество пылинок
-const N_PER_STEP: usize = 20; // количество появляющихся пылинок за шаг
-const T: usize = 60 * 10; // продолжительность жизни пылинки в кадрах
+const PARTICLES_PER_FRAME: usize = 20; // количество появляющихся пылинок за шаг
+const T: usize = 60 * 2; // продолжительность жизни пылинки в кадрах
+const STEPS_WHILE_OUT: usize = T / 60; // количество шагов, на которые перепрыгивает возраст пылинки, пока её начало вне границ экрана
 
 // vx = ax + by
 // vy = cx + dy
@@ -22,6 +22,8 @@ struct Simulator {
     points: Vec<(PointF32, usize)>,
     rng: ThreadRng,
     pressed: bool,
+
+    lines: [(PointF32, Color); TRAIL_LENGTH],
 }
 
 impl Simulator {
@@ -32,25 +34,38 @@ impl Simulator {
             velocity,
             scale,
             p0: PointF32::zero(),
-            points: Vec::with_capacity(N),
+            points: Vec::new(),
             rng: rand::thread_rng(),
             pressed: false,
+
+            lines: [(PointF32::zero(), Color::transparent()); TRAIL_LENGTH],
         }
     }
 
-    fn draw_trail(&self, canvas: &mut Canvas, steps: usize, origin: PointF32, brightness: f32) {
-        let mut p = origin;
-        let mut lines: Vec<(PointF32, Color)> = Vec::with_capacity(steps);
-        for i in 0..steps {
-            let point = p.mul(self.size.y / self.scale);
-            lines.push((
-                PointF32::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
-                Color::white().with_alpha(i as f32 / steps as f32 * brightness),
-            ));
+    fn draw_trails(&mut self, canvas: &mut Canvas) {
+        for i in 0..self.points.len() {
+            let (mut p, t) = self.points[i].clone();
+            let brightness = 1. - (2. * t as f32 / T as f32 - 1.).powi(2);
 
-            p = p + (self.velocity)(p).mul(DS);
+            for j in 0..TRAIL_LENGTH {
+                let point = p.mul(self.size.y / self.scale);
+                self.lines[j] = (
+                    PointF32::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
+                    Color::white().with_alpha(j as f32 / TRAIL_LENGTH as f32 * brightness),
+                );
+
+                p = p + (self.velocity)(p).mul(DT);
+            }
+            if p.y.abs() > self.scale || p.x.abs() > self.scale * self.size.x / self.size.y {
+                if t == 0 {
+                    self.points[i].1 += T;
+                    continue;
+                }
+                self.points[i].1 = t + STEPS_WHILE_OUT;
+            }
+
+            canvas.draw_lines_gradient(self.lines.as_slice());
         }
-        canvas.draw_lines_gradient(lines.as_slice());
     }
 }
 
@@ -69,8 +84,6 @@ impl View for Simulator {
     }
 
     fn process(&mut self, event: show::Event) -> Option<()> {
-        let w = self.bounds.width() as f32;
-        let h = self.bounds.height() as f32;
         match event {
             Event::Frame => {
                 self.points = self
@@ -80,24 +93,17 @@ impl View for Simulator {
                         if t >= T {
                             None
                         } else {
-                            Some((
-                                p + (self.velocity)(p).mul(DT),
-                                t + if p.y.abs() > self.scale
-                                    || p.x.abs() > self.scale * self.size.x / self.size.y
-                                {
-                                    T / 60
-                                } else {
-                                    1
-                                },
-                            ))
+                            Some((p + (self.velocity)(p).mul(DT), t + 1))
                         }
                     })
                     .collect();
-                for _ in 0..N_PER_STEP {
+                for _ in 0..PARTICLES_PER_FRAME {
                     self.points.push((
                         PointF32::new(
-                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * w / h,
-                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * w / h,
+                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * self.size.x
+                                / self.size.y,
+                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * self.size.x
+                                / self.size.y,
                         ),
                         0,
                     ))
@@ -106,7 +112,8 @@ impl View for Simulator {
             Event::Window(event) => match event {
                 WindowEvent::CursorPos(x, y) => {
                     self.p0 =
-                        PointF32::new(2. * x as f32 - w, h - 2. * y as f32).mul(self.scale / h);
+                        PointF32::new(2. * x as f32 - self.size.x, self.size.y - 2. * y as f32)
+                            .mul(self.scale / self.size.y);
                 }
                 WindowEvent::MouseButton(button, action, _modifiers) => {
                     if button == MouseButton::Button1 {
@@ -123,11 +130,8 @@ impl View for Simulator {
         None
     }
 
-    fn draw(&self, canvas: &mut show::Canvas) {
-        for &(point, t) in &self.points {
-            let brightness = 1. - (2. * t as f32 / T as f32 - 1.).powi(2);
-            self.draw_trail(canvas, TRAIL_LENGTH, point, brightness)
-        }
+    fn draw(&mut self, canvas: &mut show::Canvas) {
+        self.draw_trails(canvas);
 
         if self.pressed {
             let steps = 5000;
@@ -143,7 +147,6 @@ impl View for Simulator {
                 p = p + (self.velocity)(p).mul(DS);
             }
             canvas.draw_lines_gradient(lines.as_slice());
-            // self.draw_trail(canvas, 5000, self.p0, 1.);
         }
     }
 }

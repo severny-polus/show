@@ -70,9 +70,9 @@ impl<M> View<M> for Container<M> {
         None
     }
 
-    fn draw(&self, canvas: &mut Canvas) {
+    fn draw(&mut self, canvas: &mut Canvas) {
         self.style.draw(canvas, self.bounds);
-        for child in &self.children {
+        for child in &mut self.children {
             child.draw(canvas);
         }
     }

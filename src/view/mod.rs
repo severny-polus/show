@@ -14,7 +14,7 @@ pub trait View<M = ()> {
     fn height(&self) -> Length;
     fn set_bounds(&mut self, bounds: Bounds);
     fn process(&mut self, event: Event) -> Option<M>;
-    fn draw(&self, canvas: &mut Canvas);
+    fn draw(&mut self, canvas: &mut Canvas);
 }
 
 impl<M> dyn View<M> {
