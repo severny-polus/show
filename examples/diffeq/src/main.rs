@@ -1,59 +1,56 @@
 use rand::prelude::*;
 use show::{
-    views::Row, Action, Bounds, Color, Event, Length, MouseButton, Point, PointF32, Program, Size,
-    Style, View, WindowEvent,
+    views::Row, Action, Bounds, Canvas, Color, Event, Length, MouseButton, Point, PointF32,
+    Program, Size, Style, View, WindowEvent,
 };
 
 const DT: f32 = 0.005; // шаг времени
-const STEPS: usize = 5000;
-const N: usize = 200; // количество пылинок за кадр
-const T: usize = 120; // продолжительность жизни пылинки в кадрах
+const DS: f32 = 2. * DT; // шаг пути
+const TRAIL_LENGTH: usize = 50; // длина пути в шагах
+const N: usize = 1000; // количество пылинок
+const N_PER_STEP: usize = 20; // количество появляющихся пылинок за шаг
+const T: usize = 60 * 10; // продолжительность жизни пылинки в кадрах
 
 // vx = ax + by
 // vy = cx + dy
 struct Simulator {
     bounds: Bounds,
+    size: PointF32,
     velocity: fn(PointF32) -> PointF32,
     scale: f32,
     p0: PointF32,
     points: Vec<(PointF32, usize)>,
     rng: ThreadRng,
     pressed: bool,
-    eigenvectors: Option<[PointF32; 2]>,
 }
 
 impl Simulator {
     fn new(velocity: fn(PointF32) -> PointF32, scale: f32) -> Self {
         Self {
             bounds: Bounds::zero(),
+            size: PointF32::zero(),
             velocity,
             scale,
             p0: PointF32::zero(),
-            points: Vec::new(),
+            points: Vec::with_capacity(N),
             rng: rand::thread_rng(),
             pressed: false,
-            eigenvectors: None,
         }
     }
 
-    fn eigenvectors(a: f32, b: f32, c: f32, d: f32) -> Option<[PointF32; 2]> {
-        if b == 0. {
-            None
-        } else {
-            let b1 = -(a + d);
-            let c1 = a * d - b * c;
-            let d1 = b1 * b1 - 4. * c1;
-            if d1 < 0. {
-                None
-            } else {
-                let p = 0.5 * (-b1 - d1.sqrt());
-                let q = 0.5 * (-b1 + d1.sqrt());
-                Some([
-                    PointF32::new(1., (p - a) / b),
-                    PointF32::new(1., (q - a) / b),
-                ])
-            }
+    fn draw_trail(&self, canvas: &mut Canvas, steps: usize, origin: PointF32, brightness: f32) {
+        let mut p = origin;
+        let mut lines: Vec<(PointF32, Color)> = Vec::with_capacity(steps);
+        for i in 0..steps {
+            let point = p.mul(self.size.y / self.scale);
+            lines.push((
+                PointF32::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
+                Color::white().with_alpha(i as f32 / steps as f32 * brightness),
+            ));
+
+            p = p + (self.velocity)(p).mul(DS);
         }
+        canvas.draw_lines_gradient(lines.as_slice());
     }
 }
 
@@ -68,6 +65,7 @@ impl View for Simulator {
 
     fn set_bounds(&mut self, bounds: show::Bounds) {
         self.bounds = bounds;
+        self.size = bounds.size().to_f32()
     }
 
     fn process(&mut self, event: show::Event) -> Option<()> {
@@ -82,15 +80,24 @@ impl View for Simulator {
                         if t >= T {
                             None
                         } else {
-                            Some((p + (self.velocity)(p).mul(DT), t + 1))
+                            Some((
+                                p + (self.velocity)(p).mul(DT),
+                                t + if p.y.abs() > self.scale
+                                    || p.x.abs() > self.scale * self.size.x / self.size.y
+                                {
+                                    T / 60
+                                } else {
+                                    1
+                                },
+                            ))
                         }
                     })
                     .collect();
-                for _ in 0..N {
+                for _ in 0..N_PER_STEP {
                     self.points.push((
                         PointF32::new(
-                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * 2. * w / h,
-                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * 2. * w / h,
+                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * w / h,
+                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * w / h,
                         ),
                         0,
                     ))
@@ -117,51 +124,26 @@ impl View for Simulator {
     }
 
     fn draw(&self, canvas: &mut show::Canvas) {
-        let w = self.bounds.width() as f32;
-        let h = self.bounds.height() as f32;
-
-        match self.eigenvectors {
-            Some([v, u]) => {
-                let c = PointF32::new(w / 2., h / 2.);
-                let a = 0.25;
-                canvas.draw_lines(
-                    &[c - v.mul(w / 2.), c + v.mul(w / 2.)],
-                    Color::new(1., 0., 0., a),
-                );
-                canvas.draw_lines(
-                    &[c - u.mul(w / 2.), c + u.mul(w / 2.)],
-                    Color::new(0., 0., 1., a),
-                );
-            }
-            _ => {}
+        for &(point, t) in &self.points {
+            let brightness = 1. - (2. * t as f32 / T as f32 - 1.).powi(2);
+            self.draw_trail(canvas, TRAIL_LENGTH, point, brightness)
         }
 
-        let points: Vec<(PointF32, Color)> = self
-            .points
-            .iter()
-            .map(|&(p, t)| {
-                let p = p.mul(h / self.scale);
-                (
-                    PointF32::new(p.x() + w, p.y() + h).mul(0.5),
-                    Color::white().with_alpha(1. - (2. * t as f32 / T as f32 - 1.).powi(2)),
-                )
-            })
-            .collect();
-        canvas.draw_points(points.as_slice());
-
         if self.pressed {
+            let steps = 5000;
             let mut p = self.p0;
-            let mut lines: Vec<(PointF32, Color)> = Vec::with_capacity(STEPS);
-            for i in 0..STEPS {
-                let point = p.mul(h / self.scale);
+            let mut lines: Vec<(PointF32, Color)> = Vec::with_capacity(steps);
+            for i in 0..steps {
+                let point = p.mul(self.size.y / self.scale);
                 lines.push((
-                    PointF32::new(point.x() + w, point.y() + h).mul(0.5),
-                    Color::white().with_alpha((STEPS - i) as f32 / STEPS as f32),
+                    PointF32::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
+                    Color::white().with_alpha((steps - i) as f32 / steps as f32),
                 ));
 
-                p = p + (self.velocity)(p).mul(DT);
+                p = p + (self.velocity)(p).mul(DS);
             }
             canvas.draw_lines_gradient(lines.as_slice());
+            // self.draw_trail(canvas, 5000, self.p0, 1.);
         }
     }
 }
@@ -171,13 +153,8 @@ fn main() {
     program
         .show(Size::Max, "Differential equations", || {
             Simulator::new(
-                |p| {
-                    PointF32::new(
-                        3. * p.x().powi(2) - p.x() * p.y() + 2.,
-                        p.x().powi(2) - p.x() - 2.,
-                    )
-                },
-                8.,
+                |p| PointF32::new(2. * p.x + 1. * p.y, 6. * p.x + 1. * p.y),
+                1.,
             )
         })
         .unwrap();

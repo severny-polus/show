@@ -1,5 +1,4 @@
 pub mod color;
-pub mod draw;
 mod gl;
 mod gradient;
 mod solid;
@@ -84,8 +83,8 @@ impl Canvas {
             .iter()
             .map(|(p, c)| {
                 [
-                    2. * p.x() / self.size.x() - 1.,
-                    2. * p.y() / self.size.y() - 1.,
+                    2. * p.x / self.size.x - 1.,
+                    2. * p.y / self.size.y - 1.,
                     c.r,
                     c.g,
                     c.b,
@@ -132,8 +131,8 @@ impl Canvas {
             .iter()
             .map(|p| {
                 [
-                    2. * p.x() / self.size.x() - 1.,
-                    2. * p.y() / self.size.y() - 1.,
+                    2. * p.x / self.size.x - 1.,
+                    2. * p.y / self.size.y - 1.,
                 ]
             })
             .flatten()
@@ -176,8 +175,8 @@ impl Canvas {
             .iter()
             .map(|(p, c)| {
                 [
-                    2. * p.x() / self.size.x() - 1.,
-                    2. * p.y() / self.size.y() - 1.,
+                    2. * p.x / self.size.x - 1.,
+                    2. * p.y / self.size.y - 1.,
                     c.r,
                     c.g,
                     c.b,
@@ -232,8 +231,8 @@ impl Canvas {
             .iter()
             .map(|p| {
                 [
-                    2. * p.x() / self.size.x() - 1.,
-                    2. * p.y() / self.size.y() - 1.,
+                    2. * p.x / self.size.x - 1.,
+                    2. * p.y / self.size.y - 1.,
                 ]
             })
             .flatten()

@@ -1,5 +1,6 @@
 use show::{
-    style::Border, views::Row, Color, Command, Indents, Model, Program, Size, Style, Subscriptions, View
+    style::Border, views::Row, Color, Command, Indents, Model, Program, Size, Style, Subscriptions,
+    View,
 };
 
 fn main() {

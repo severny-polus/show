@@ -1,6 +1,4 @@
-use std::{borrow::Borrow, rc::Rc};
-
-use crate::{Bounds, Canvas, Command, Event, Length, Model, Point, Subscriptions, View};
+use crate::{Bounds, Canvas, Command, Event, Model, Point, Subscriptions, View};
 use glfw::{Context, InitError, OpenGlProfileHint, WindowEvent, WindowHint, WindowMode};
 
 pub struct Program {
