@@ -77,6 +77,12 @@ impl Color {
     }
 }
 
+impl Default for Color {
+    fn default() -> Self {
+        Self::transparent()
+    }
+}
+
 impl From<&str> for Color {
     fn from(value: &str) -> Self {
         Color::hex(value)

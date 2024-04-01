@@ -4,11 +4,10 @@ use show::{
     WindowEvent,
 };
 
-const DT: f32 = 0.005; // шаг времени
-const DS: f32 = 2. * DT; // шаг пути
-const TRAIL_LENGTH: usize = 50; // длина пути в шагах
+const DT: f32 = 0.001; // шаг времени
+const TRAIL_LENGTH: usize = 100; // длина пути в шагах
 const PARTICLES_PER_FRAME: usize = 20; // количество появляющихся пылинок за шаг
-const T: usize = 60 * 2; // продолжительность жизни пылинки в кадрах
+const T: usize = 60 * 10; // продолжительность жизни пылинки в кадрах
 const STEPS_WHILE_OUT: usize = T / 60; // количество шагов, на которые перепрыгивает возраст пылинки, пока её начало вне границ экрана
 
 // vx = ax + by
@@ -65,6 +64,7 @@ impl Simulator {
             }
 
             canvas.draw_lines_gradient(self.lines.as_slice());
+            // TODO: split points and color calculations
         }
     }
 }
@@ -144,7 +144,7 @@ impl View for Simulator {
                     Color::white().with_alpha((steps - i) as f32 / steps as f32),
                 ));
 
-                p = p + (self.velocity)(p).mul(DS);
+                p = p + (self.velocity)(p).mul(DT);
             }
             canvas.draw_lines_gradient(lines.as_slice());
         }

@@ -71,7 +71,7 @@ impl<M> View<M> for Container<M> {
     }
 
     fn draw(&mut self, canvas: &mut Canvas) {
-        self.style.draw(canvas, self.bounds);
+        self.style.draw_rectangle(canvas, self.bounds);
         for child in &mut self.children {
             child.draw(canvas);
         }

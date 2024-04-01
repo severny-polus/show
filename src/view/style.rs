@@ -69,7 +69,7 @@ pub struct Style {
 }
 
 impl Style {
-    pub fn draw(&self, canvas: &mut Canvas, bounds: Bounds) {
+    pub fn draw_rectangle(&self, canvas: &mut Canvas, bounds: Bounds) {
         canvas.draw_rectangle(
             Indents::equal(self.border.width).shrink(bounds),
             self.backdround,
@@ -83,10 +83,10 @@ impl Default for Style {
         Self {
             width: Length::Fill,
             height: Length::Fill,
-            margin: Indents::zero(),
-            padding: Indents::zero(),
-            backdround: Color::transparent(),
-            border: Border::default(),
+            margin: Default::default(),
+            padding: Default::default(),
+            backdround: Default::default(),
+            border: Default::default(),
         }
     }
 }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["examples/diffeq", "examples/demo"]
+members = ["examples/demo", "examples/diffeq"]
 
 [package]
 name = "show"
@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 glow = "0.13.1"
 glfw = "0.55.0"
-image = "0.24.9"
+image = "0.25.1"

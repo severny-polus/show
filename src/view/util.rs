@@ -12,6 +12,12 @@ pub enum Length {
     FillPortion(f64),
 }
 
+impl Default for Length {
+    fn default() -> Self {
+        Self::Fill
+    }
+}
+
 impl Length {
     pub fn pixels(self, total_length: u32, total_portions: f64) -> u32 {
         match self {
@@ -40,18 +46,16 @@ pub struct Indents {
     bottom: u32,
 }
 
-impl Default for Indents {
-    fn default() -> Self {
+impl Indents {
+    pub fn new(left: u32, top: u32, right: u32, bottom: u32) -> Self {
         Self {
-            left: 0,
-            top: 0,
-            right: 0,
-            bottom: 0,
+            left,
+            top,
+            right,
+            bottom,
         }
     }
-}
 
-impl Indents {
     pub fn equal(value: u32) -> Self {
         Self {
             left: value,
@@ -70,22 +74,8 @@ impl Indents {
         }
     }
 
-    pub fn indents(left: u32, top: u32, right: u32, bottom: u32) -> Self {
-        Self {
-            left,
-            top,
-            right,
-            bottom,
-        }
-    }
-
     pub fn zero() -> Self {
-        Self {
-            left: 0,
-            top: 0,
-            right: 0,
-            bottom: 0,
-        }
+        Self::equal(0)
     }
 
     pub fn shrink(&self, bounds: Bounds) -> Bounds {
@@ -93,5 +83,11 @@ impl Indents {
             bounds.min + Point::new(self.left as i32, self.top as i32),
             bounds.max - Point::new(self.right as i32, self.bottom as i32),
         )
+    }
+}
+
+impl Default for Indents {
+    fn default() -> Self {
+        Self::zero()
     }
 }

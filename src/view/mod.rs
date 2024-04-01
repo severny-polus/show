@@ -1,6 +1,6 @@
 pub mod style;
 pub mod util;
-pub mod views;
+pub mod container;
 
 use crate::{Bounds, Canvas, Event, Point};
 

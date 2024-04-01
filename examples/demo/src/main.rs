@@ -1,5 +1,5 @@
 use show::{
-    style::Border, views::Row, Color, Command, Indents, Model, Program, Size, Style, Subscriptions,
+    style::Border, container::Row, Color, Command, Indents, Model, Program, Size, Style, Subscriptions,
     View,
 };
 
