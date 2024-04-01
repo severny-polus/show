@@ -1,6 +1,6 @@
+pub mod container;
 pub mod style;
 pub mod util;
-pub mod container;
 
 use crate::{Bounds, Canvas, Event, Point};
 
@@ -20,8 +20,8 @@ pub trait View<M = ()> {
 impl<M> dyn View<M> {
     fn adjust_bounds(
         &mut self,
-        min: Point,
-        total_size: Point,
+        min: Point<i32>,
+        total_size: Point<i32>,
         portions_x: f64,
         portions_y: f64,
     ) -> Point {
@@ -29,7 +29,7 @@ impl<M> dyn View<M> {
             self.width().pixels(total_size.x as u32, portions_x) as i32,
             self.height().pixels(total_size.y as u32, portions_y) as i32,
         );
-        let bounds = min.pull(size);
+        let bounds = Bounds::pull(min, size);
         self.set_bounds(bounds);
         bounds.max
     }

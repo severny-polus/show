@@ -1,79 +1,100 @@
-use std::ops::{Add, Neg, Range, Sub};
+use std::ops::{Add, Div, Mul, Neg, Range, Sub};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Point {
-    pub x: i32,
-    pub y: i32,
+#[derive(Debug, Clone, Copy)]
+pub struct Point<T = i32>
+where
+    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+{
+    pub x: T,
+    pub y: T,
 }
 
-impl Point {
-    pub fn new(x: i32, y: i32) -> Self {
-        return Self { x: x, y: y };
+impl<T> Point<T>
+where
+    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+{
+    pub fn new(x: T, y: T) -> Self {
+        Self { x, y }
+    }
+
+    pub fn mul(self, c: T) -> Self {
+        Self::new(self.x * c, self.y * c)
+    }
+
+    pub fn div(self, c: T) -> Self {
+        Self::new(self.x / c, self.y / c)
+    }
+}
+
+impl<T> Neg for Point<T>
+where
+    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+{
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self::new(-self.x, -self.y)
+    }
+}
+
+impl<T> Add for Point<T>
+where
+    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+{
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y)
+    }
+}
+
+impl<T> Sub for Point<T>
+where
+    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+{
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
+impl Point<i32> {
+    pub fn zero() -> Self {
+        Point::new(0, 0)
     }
 
     pub fn from_pair((x, y): (i32, i32)) -> Self {
         Self::new(x, y)
     }
 
-    pub fn zero() -> Self {
-        Self { x: 0, y: 0 }
-    }
-
-    pub fn pull(self, size: Self) -> Bounds {
-        Bounds::pull(self, size)
-    }
-
-    pub fn pull_wh(self, width: i32, height: i32) -> Bounds {
-        Bounds::pull(self, Point::new(width, height)).fix()
-    }
-
-    pub fn mul(self, c: i32) -> Self {
-        Self::new(self.x * c, self.y * c)
-    }
-
-    pub fn div(self, c: i32) -> Self {
-        Self::new(self.x / c, self.y / c)
-    }
-
     pub fn to_floats(self) -> [f32; 2] {
         [self.x as f32, self.y as f32]
     }
 
-    pub fn to_f32(self) -> PointF32 {
-        PointF32::new(self.x as f32, self.y as f32)
+    pub fn to_f32(self) -> Point<f32> {
+        Point::new(self.x as f32, self.y as f32)
     }
 }
 
-impl Default for Point {
+impl Point<f32> {
+    pub fn zero() -> Self {
+        Self::new(0., 0.)
+    }
+}
+
+impl Default for Point<i32> {
     fn default() -> Self {
         Self::zero()
     }
 }
 
-impl From<(i32, i32)> for Point {
-    fn from(value: (i32, i32)) -> Self {
-        Self::from_pair(value)
-    }
-}
-
-impl Add for Point {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self::Output {
-        Self::new(self.x + rhs.x, self.y + rhs.y)
-    }
-}
-
-impl Neg for Point {
-    type Output = Self;
-    fn neg(self) -> Self::Output {
-        Self::new(-self.x, -self.y)
-    }
-}
-
-impl Sub for Point {
-    type Output = Self;
-    fn sub(self, rhs: Self) -> Self::Output {
-        self + -rhs
+impl<T> From<(T, T)> for Point<T>
+where
+    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+{
+    fn from((x, y): (T, T)) -> Self {
+        Self::new(x, y)
     }
 }
 
@@ -136,8 +157,8 @@ impl Interval {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Bounds {
-    pub min: Point,
-    pub max: Point,
+    pub min: Point<i32>,
+    pub max: Point<i32>,
 }
 
 impl Bounds {
@@ -152,16 +173,16 @@ impl Bounds {
         Self::from_points(Point::new(x1, y1), Point::new(x2, y2))
     }
 
-    pub fn from_points(p1: Point, p2: Point) -> Self {
+    pub fn from_points(p1: Point<i32>, p2: Point<i32>) -> Self {
         Self { min: p1, max: p2 }
     }
 
-    pub fn from_size(size: Point) -> Self {
-        Self::from_points(Point::zero(), size)
+    pub fn from_size(size: Point<i32>) -> Self {
+        Self::from_points(Point::<i32>::zero(), size)
     }
 
     pub fn zero() -> Self {
-        Self::from_points(Point::zero(), Point::zero())
+        Self::from_points(Point::<i32>::zero(), Point::<i32>::zero())
     }
 
     pub fn fix(self) -> Self {
@@ -186,15 +207,15 @@ impl Bounds {
         self.y().length()
     }
 
-    pub fn size(self) -> Point {
+    pub fn size(self) -> Point<i32> {
         Point::new(self.width(), self.height())
     }
 
-    pub fn contains(self, v: Point) -> bool {
+    pub fn contains(self, v: Point<i32>) -> bool {
         self.min.x <= v.x && v.x < self.max.x && self.min.y <= v.y && v.y < self.max.y
     }
 
-    pub fn center(self) -> Point {
+    pub fn center(self) -> Point<i32> {
         (self.min + self.max).div(2)
     }
 
@@ -230,49 +251,5 @@ impl Bounds {
 impl Default for Bounds {
     fn default() -> Self {
         Self::zero()
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct PointF32 {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl PointF32 {
-    pub fn new(x: f32, y: f32) -> Self {
-        Self { x, y }
-    }
-
-    pub fn zero() -> Self {
-        Self::new(0., 0.)
-    }
-
-    pub fn mul(self, c: f32) -> Self {
-        Self::new(c * self.x, c * self.y)
-    }
-}
-
-impl Neg for PointF32 {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        Self::new(-self.x, -self.y)
-    }
-}
-
-impl Add for PointF32 {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self::new(self.x + rhs.x, self.y + rhs.y)
-    }
-}
-
-impl Sub for PointF32 {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Self::new(self.x - rhs.x, self.y - rhs.y)
     }
 }

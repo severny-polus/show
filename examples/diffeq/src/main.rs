@@ -1,6 +1,6 @@
 use rand::prelude::*;
 use show::{
-    Action, Bounds, Canvas, Color, Event, Length, MouseButton, PointF32, Program, Size, View,
+    Action, Bounds, Canvas, Color, Event, Length, MouseButton, Point, Program, Size, View,
     WindowEvent,
 };
 
@@ -14,30 +14,30 @@ const STEPS_WHILE_OUT: usize = T / 60; // количество шагов, на 
 // vy = cx + dy
 struct Simulator {
     bounds: Bounds,
-    size: PointF32,
-    velocity: fn(PointF32) -> PointF32,
+    size: Point<f32>,
+    velocity: fn(Point<f32>) -> Point<f32>,
     scale: f32,
-    p0: PointF32,
-    points: Vec<(PointF32, usize)>,
+    p0: Point<f32>,
+    points: Vec<(Point<f32>, usize)>,
     rng: ThreadRng,
     pressed: bool,
 
-    lines: [(PointF32, Color); TRAIL_LENGTH],
+    lines: [(Point<f32>, Color); TRAIL_LENGTH],
 }
 
 impl Simulator {
-    fn new(velocity: fn(PointF32) -> PointF32, scale: f32) -> Self {
+    fn new(velocity: fn(Point<f32>) -> Point<f32>, scale: f32) -> Self {
         Self {
             bounds: Bounds::zero(),
-            size: PointF32::zero(),
+            size: Point::<f32>::zero(),
             velocity,
             scale,
-            p0: PointF32::zero(),
+            p0: Point::<f32>::zero(),
             points: Vec::new(),
             rng: rand::thread_rng(),
             pressed: false,
 
-            lines: [(PointF32::zero(), Color::transparent()); TRAIL_LENGTH],
+            lines: [(Point::<f32>::zero(), Color::transparent()); TRAIL_LENGTH],
         }
     }
 
@@ -49,7 +49,7 @@ impl Simulator {
             for j in 0..TRAIL_LENGTH {
                 let point = p.mul(self.size.y / self.scale);
                 self.lines[j] = (
-                    PointF32::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
+                    Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
                     Color::white().with_alpha(j as f32 / TRAIL_LENGTH as f32 * brightness),
                 );
 
@@ -99,7 +99,7 @@ impl View for Simulator {
                     .collect();
                 for _ in 0..PARTICLES_PER_FRAME {
                     self.points.push((
-                        PointF32::new(
+                        Point::new(
                             (self.rng.gen::<f32>() * 2. - 1.) * self.scale * self.size.x
                                 / self.size.y,
                             (self.rng.gen::<f32>() * 2. - 1.) * self.scale * self.size.x
@@ -111,9 +111,8 @@ impl View for Simulator {
             }
             Event::Window(event) => match event {
                 WindowEvent::CursorPos(x, y) => {
-                    self.p0 =
-                        PointF32::new(2. * x as f32 - self.size.x, self.size.y - 2. * y as f32)
-                            .mul(self.scale / self.size.y);
+                    self.p0 = Point::new(2. * x as f32 - self.size.x, self.size.y - 2. * y as f32)
+                        .mul(self.scale / self.size.y);
                 }
                 WindowEvent::MouseButton(button, action, _modifiers) => {
                     if button == MouseButton::Button1 {
@@ -136,11 +135,11 @@ impl View for Simulator {
         if self.pressed {
             let steps = 5000;
             let mut p = self.p0;
-            let mut lines: Vec<(PointF32, Color)> = Vec::with_capacity(steps);
+            let mut lines: Vec<(Point<f32>, Color)> = Vec::with_capacity(steps);
             for i in 0..steps {
                 let point = p.mul(self.size.y / self.scale);
                 lines.push((
-                    PointF32::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
+                    Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
                     Color::white().with_alpha((steps - i) as f32 / steps as f32),
                 ));
 
@@ -155,10 +154,7 @@ fn main() {
     let mut program = Program::new().unwrap();
     program
         .show(Size::Max, "Differential equations", || {
-            Simulator::new(
-                |p| PointF32::new(2. * p.x + 1. * p.y, 6. * p.x + 1. * p.y),
-                1.,
-            )
+            Simulator::new(|p| Point::new(2. * p.x + 1. * p.y, 6. * p.x + 1. * p.y), 1.)
         })
         .unwrap();
 }

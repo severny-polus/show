@@ -3,10 +3,7 @@ mod gl;
 mod gradient;
 mod solid;
 
-use crate::{
-    math::{Bounds, Point},
-    PointF32,
-};
+use crate::math::{Bounds, Point};
 pub use color::Color;
 use core::ffi::c_void;
 use glow::{self, Context, HasContext, Program, UniformLocation};
@@ -15,7 +12,7 @@ use std::mem::size_of;
 pub struct Canvas {
     gl: Context,
 
-    size: PointF32,
+    size: Point<f32>,
     dpi: f32,
 
     solid_program: Program,
@@ -54,7 +51,7 @@ impl Canvas {
             let mut canvas = Self {
                 gl,
 
-                size: PointF32::zero(),
+                size: Point::new(0., 0.),
                 dpi,
 
                 solid_program,
@@ -78,7 +75,7 @@ impl Canvas {
 }
 
 impl Canvas {
-    pub fn draw_points(&self, points: &[(PointF32, Color)]) {
+    pub fn draw_points(&self, points: &[(Point<f32>, Color)]) {
         let floats: Vec<f32> = points
             .iter()
             .map(|(p, c)| {
@@ -126,15 +123,10 @@ impl Canvas {
         }
     }
 
-    pub fn draw_lines(&self, points: &[PointF32], color: Color) {
+    pub fn draw_lines(&self, points: &[Point<f32>], color: Color) {
         let floats: Vec<f32> = points
             .iter()
-            .map(|p| {
-                [
-                    2. * p.x / self.size.x - 1.,
-                    2. * p.y / self.size.y - 1.,
-                ]
-            })
+            .map(|p| [2. * p.x / self.size.x - 1., 2. * p.y / self.size.y - 1.])
             .flatten()
             .collect();
         unsafe {
@@ -170,7 +162,7 @@ impl Canvas {
         }
     }
 
-    pub fn draw_lines_gradient(&self, points: &[(PointF32, Color)]) {
+    pub fn draw_lines_gradient(&self, points: &[(Point<f32>, Color)]) {
         let floats: Vec<f32> = points
             .iter()
             .map(|(p, c)| {
@@ -221,20 +213,15 @@ impl Canvas {
 
     pub fn draw_quadrangle(
         &self,
-        a: PointF32,
-        b: PointF32,
-        c: PointF32,
-        d: PointF32,
+        a: Point<f32>,
+        b: Point<f32>,
+        c: Point<f32>,
+        d: Point<f32>,
         color: Color,
     ) {
         let floats: Vec<f32> = [a, b, d, c]
             .iter()
-            .map(|p| {
-                [
-                    2. * p.x / self.size.x - 1.,
-                    2. * p.y / self.size.y - 1.,
-                ]
-            })
+            .map(|p| [2. * p.x / self.size.x - 1., 2. * p.y / self.size.y - 1.])
             .flatten()
             .collect();
         unsafe {
