@@ -1,8 +1,5 @@
 use rand::prelude::*;
-use show::{
-    Action, Bounds, Canvas, Color, Event, Length, MouseButton, Point, Program, Size, View,
-    WindowEvent,
-};
+use show::{Action, Bounds, Canvas, Color, Event, Length, MouseButton, Point, Program, Size, View};
 
 const DT: f32 = 0.001; // шаг времени
 const TRAIL_LENGTH: usize = 100; // длина пути в шагах
@@ -86,11 +83,11 @@ impl View for Simulator {
     fn process(&mut self, event: show::Event) -> Option<()> {
         match event {
             event => match event {
-                WindowEvent::CursorPos(x, y) => {
+                Event::CursorPos(x, y) => {
                     self.p0 = Point::new(2. * x as f32 - self.size.x, self.size.y - 2. * y as f32)
                         .mul(self.scale / self.size.y);
                 }
-                WindowEvent::MouseButton(button, action, _modifiers) => {
+                Event::MouseButton(button, action, _modifiers) => {
                     if button == MouseButton::Button1 {
                         match action {
                             Action::Press => self.pressed = true,
