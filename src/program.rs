@@ -78,7 +78,6 @@ impl Program {
             // canvas.draw_image();
 
             window.swap_buffers();
-            view.process(Event::Frame);
             self.glfw.poll_events();
             for (_, event) in glfw::flush_messages(&events) {
                 match event {
@@ -89,7 +88,7 @@ impl Program {
                     }
                     _ => (),
                 }
-                match view.process(Event::Window(event)) {
+                match view.process(event) {
                     Some(message) => {
                         match model.update(message) {
                             Command::Update => {

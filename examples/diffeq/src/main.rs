@@ -85,31 +85,7 @@ impl View for Simulator {
 
     fn process(&mut self, event: show::Event) -> Option<()> {
         match event {
-            Event::Frame => {
-                self.points = self
-                    .points
-                    .iter()
-                    .filter_map(|&(p, t)| {
-                        if t >= T {
-                            None
-                        } else {
-                            Some((p + (self.velocity)(p).mul(DT), t + 1))
-                        }
-                    })
-                    .collect();
-                for _ in 0..PARTICLES_PER_FRAME {
-                    self.points.push((
-                        Point::new(
-                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * self.size.x
-                                / self.size.y,
-                            (self.rng.gen::<f32>() * 2. - 1.) * self.scale * self.size.x
-                                / self.size.y,
-                        ),
-                        0,
-                    ))
-                }
-            }
-            Event::Window(event) => match event {
+            event => match event {
                 WindowEvent::CursorPos(x, y) => {
                     self.p0 = Point::new(2. * x as f32 - self.size.x, self.size.y - 2. * y as f32)
                         .mul(self.scale / self.size.y);
@@ -146,6 +122,27 @@ impl View for Simulator {
                 p = p + (self.velocity)(p).mul(DT);
             }
             canvas.draw_lines_gradient(lines.as_slice());
+        }
+
+        self.points = self
+            .points
+            .iter()
+            .filter_map(|&(p, t)| {
+                if t >= T {
+                    None
+                } else {
+                    Some((p + (self.velocity)(p).mul(DT), t + 1))
+                }
+            })
+            .collect();
+        for _ in 0..PARTICLES_PER_FRAME {
+            self.points.push((
+                Point::new(
+                    (self.rng.gen::<f32>() * 2. - 1.) * self.scale * self.size.x / self.size.y,
+                    (self.rng.gen::<f32>() * 2. - 1.) * self.scale * self.size.x / self.size.y,
+                ),
+                0,
+            ))
         }
     }
 }

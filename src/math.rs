@@ -1,26 +1,30 @@
 use std::ops::{Add, Div, Mul, Neg, Range, Sub};
 
 #[derive(Debug, Clone, Copy)]
-pub struct Point<T = i32>
-where
-    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
-{
+pub struct Point<T = i32> {
     pub x: T,
     pub y: T,
 }
 
-impl<T> Point<T>
-where
-    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
-{
+impl<T> Point<T> {
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
+}
 
+impl<T> Point<T>
+where
+    T: Mul<Output = T> + Copy,
+{
     pub fn mul(self, c: T) -> Self {
         Self::new(self.x * c, self.y * c)
     }
+}
 
+impl<T> Point<T>
+where
+    T: Div<Output = T> + Copy,
+{
     pub fn div(self, c: T) -> Self {
         Self::new(self.x / c, self.y / c)
     }
@@ -28,7 +32,7 @@ where
 
 impl<T> Neg for Point<T>
 where
-    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+    T: Neg<Output = T> + Copy,
 {
     type Output = Self;
 
@@ -39,7 +43,7 @@ where
 
 impl<T> Add for Point<T>
 where
-    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+    T: Add<Output = T> + Copy,
 {
     type Output = Self;
 
@@ -50,7 +54,7 @@ where
 
 impl<T> Sub for Point<T>
 where
-    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
+    T: Sub<Output = T> + Copy,
 {
     type Output = Self;
 
@@ -89,10 +93,7 @@ impl Default for Point<i32> {
     }
 }
 
-impl<T> From<(T, T)> for Point<T>
-where
-    T: Neg<Output = T> + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Copy,
-{
+impl<T> From<(T, T)> for Point<T> {
     fn from((x, y): (T, T)) -> Self {
         Self::new(x, y)
     }

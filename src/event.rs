@@ -2,10 +2,7 @@ pub type MouseButton = glfw::MouseButton;
 pub type Action = glfw::Action;
 pub type WindowEvent = glfw::WindowEvent;
 
-pub enum Event {
-    Frame,
-    Window(WindowEvent),
-}
+pub type Event = WindowEvent;
 
 pub struct Subscriptions<M> {
     filters: Vec<fn(Event) -> Option<M>>,
