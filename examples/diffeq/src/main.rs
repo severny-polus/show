@@ -1,54 +1,77 @@
+use std::iter::zip;
+
 use rand::prelude::*;
-use show::{Action, Bounds, Canvas, Color, Event, Length, MouseButton, Point, Program, Size, View};
+use show::{
+    context::{DrawMode, Object, PolylineGradient},
+    Action, Bounds, Color, Context, Drawer, Event, Length, MouseButton, Point, Program, Size, View,
+};
 
 const DT: f32 = 0.001; // шаг времени
 const TRAIL_LENGTH: usize = 100; // длина пути в шагах
 const PARTICLES_PER_FRAME: usize = 20; // количество появляющихся пылинок за шаг
 const T: usize = 60 * 10; // продолжительность жизни пылинки в кадрах
-const STEPS_WHILE_OUT: usize = T / 60; // количество шагов, на которые перепрыгивает возраст пылинки, пока её начало вне границ экрана
+const STEPS_OUTSIDE: usize = T / 60; // количество шагов, на которые перепрыгивает возраст пылинки, пока её начало вне границ экрана
+
+const PARTICLES_TOTAL: usize = 1000;
+
+struct Simulator {
+    velocity: fn(Point<f32>) -> Point<f32>,
+    scale: f32,
+}
 
 // vx = ax + by
 // vy = cx + dy
-struct Simulator {
-    bounds: Bounds,
-    size: Point<f32>,
+struct SimulatorDrawer {
     velocity: fn(Point<f32>) -> Point<f32>,
     scale: f32,
+
+    bounds: Bounds,
+    size: Point<f32>,
     p0: Point<f32>,
     points: Vec<(Point<f32>, usize)>,
     rng: ThreadRng,
     pressed: bool,
 
-    lines: [(Point<f32>, Color); TRAIL_LENGTH],
+    trail_points: [Point<f32>; TRAIL_LENGTH],
+    trail_colors: [Color; TRAIL_LENGTH],
+
+    trails: Vec<PolylineGradient>,
 }
 
-impl Simulator {
-    fn new(velocity: fn(Point<f32>) -> Point<f32>, scale: f32) -> Self {
-        Self {
+impl View for Simulator {
+    fn new_drawer(&self, context: &mut Context) -> Box<dyn Drawer<()>> {
+        Box::new(SimulatorDrawer {
+            velocity: self.velocity,
+            scale: self.scale,
+
             bounds: Bounds::zero(),
             size: Point::<f32>::zero(),
-            velocity,
-            scale,
             p0: Point::<f32>::zero(),
             points: Vec::new(),
             rng: rand::thread_rng(),
             pressed: false,
 
-            lines: [(Point::<f32>::zero(), Color::transparent()); TRAIL_LENGTH],
-        }
-    }
+            trail_points: [Point::<f32>::zero(); TRAIL_LENGTH],
+            trail_colors: [Color::transparent(); TRAIL_LENGTH],
 
-    fn draw_trails(&mut self, canvas: &mut Canvas) {
+            trails: (0..PARTICLES_TOTAL)
+                .into_iter()
+                .map(|_| PolylineGradient::new(context))
+                .collect(),
+        })
+    }
+}
+
+impl SimulatorDrawer {
+    fn draw_trails(&mut self, context: &mut Context) {
         for i in 0..self.points.len() {
             let (mut p, t) = self.points[i].clone();
             let brightness = 1. - (2. * t as f32 / T as f32 - 1.).powi(2);
 
             for j in 0..TRAIL_LENGTH {
                 let point = p.mul(self.size.y / self.scale);
-                self.lines[j] = (
-                    Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
-                    Color::white().with_alpha(j as f32 / TRAIL_LENGTH as f32 * brightness),
-                );
+                self.trail_points[j] =
+                    Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5);
 
                 p = p + (self.velocity)(p).mul(DT);
             }
@@ -57,16 +80,19 @@ impl Simulator {
                     self.points[i].1 += T;
                     continue;
                 }
-                self.points[i].1 = t + STEPS_WHILE_OUT;
+                self.points[i].1 = t + STEPS_OUTSIDE;
+            }
+            for j in 0..TRAIL_LENGTH {
+                self.trail_colors[j] =
+                    Color::white().with_alpha(j as f32 / TRAIL_LENGTH as f32 * brightness);
             }
 
-            canvas.draw_lines_gradient(self.lines.as_slice());
-            // TODO: split points and color calculations
+            PolylineGradient::stream(context, zip(self.trail_points, self.trail_colors));
         }
     }
 }
 
-impl View for Simulator {
+impl Drawer for SimulatorDrawer {
     fn width(&self) -> show::Length {
         Length::Fill
     }
@@ -75,12 +101,12 @@ impl View for Simulator {
         Length::Fill
     }
 
-    fn set_bounds(&mut self, bounds: show::Bounds) {
+    fn set_bounds(&mut self, bounds: Bounds) {
         self.bounds = bounds;
         self.size = bounds.size().to_f32()
     }
 
-    fn process(&mut self, event: show::Event) -> Option<()> {
+    fn process(&mut self, event: Event) -> Option<()> {
         match event {
             event => match event {
                 Event::CursorPos(x, y) => {
@@ -102,23 +128,23 @@ impl View for Simulator {
         None
     }
 
-    fn draw(&mut self, canvas: &mut show::Canvas) {
-        self.draw_trails(canvas);
+    fn draw(&mut self, context: &mut Context) {
+        self.draw_trails(context);
 
         if self.pressed {
             let steps = 5000;
             let mut p = self.p0;
-            let mut lines: Vec<(Point<f32>, Color)> = Vec::with_capacity(steps);
+            let mut lines: Vec<Point<f32>> = Vec::with_capacity(steps);
+
             for i in 0..steps {
                 let point = p.mul(self.size.y / self.scale);
-                lines.push((
-                    Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5),
-                    Color::white().with_alpha((steps - i) as f32 / steps as f32),
-                ));
+                lines.push(Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5));
 
                 p = p + (self.velocity)(p).mul(DT);
             }
-            canvas.draw_lines_gradient(lines.as_slice());
+            let colors: Vec<Color> = (0..lines.len())
+                .map(|i| Color::white().with_alpha((lines.len() - i) as f32 / lines.len() as f32))
+                .collect();
         }
 
         self.points = self
@@ -147,8 +173,9 @@ impl View for Simulator {
 fn main() {
     let mut program = Program::new().unwrap();
     program
-        .show(Size::Max, "Differential equations", || {
-            Simulator::new(|p| Point::new(2. * p.x + 1. * p.y, 6. * p.x + 1. * p.y), 1.)
+        .show(Size::Max, "Differential equations", || Simulator {
+            velocity: |p| Point::new(2. * p.x + 1. * p.y, 6. * p.x + 1. * p.y),
+            scale: 1.,
         })
         .unwrap();
 }

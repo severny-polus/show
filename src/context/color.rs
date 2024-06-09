@@ -15,16 +15,16 @@ const fn hex_to_u8(hex: u8) -> u8 {
     }
 }
 
-const fn hex2_to_f32(a: u8, b: u8) -> f32 {
+fn hex2_to_f32(a: u8, b: u8) -> f32 {
     (16 * hex_to_u8(a) + hex_to_u8(b)) as f32 / 255.
 }
 
 impl Color {
-    pub const fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
+    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 
-    pub const fn hex(hex_str: &str) -> Self {
+    pub fn hex(hex_str: &str) -> Self {
         let h = hex_str.as_bytes();
         let i: usize = if h[0] == b'#' { 1 } else { 0 };
         match h.len() - i {
@@ -44,7 +44,7 @@ impl Color {
         }
     }
 
-    pub const fn from_array(v: [f32; 4]) -> Self {
+    pub fn from_array(v: [f32; 4]) -> Self {
         Self::new(v[0], v[1], v[2], v[3])
     }
 
@@ -52,19 +52,19 @@ impl Color {
         [self.r, self.g, self.b, self.a]
     }
 
-    pub const fn with_alpha(self, alpha: f32) -> Self {
+    pub fn with_alpha(self, alpha: f32) -> Self {
         Self::new(self.r, self.g, self.b, alpha)
     }
 
-    pub const fn white() -> Color {
+    pub fn white() -> Color {
         Self::new(1., 1., 1., 1.)
     }
 
-    pub const fn black() -> Color {
+    pub fn black() -> Color {
         Self::new(0., 0., 0., 1.)
     }
 
-    pub const fn transparent() -> Color {
+    pub fn transparent() -> Color {
         Self::new(0., 0., 0., 0.)
     }
 

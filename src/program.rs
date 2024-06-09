@@ -1,5 +1,5 @@
-use crate::{Bounds, Canvas, Command, Model, Point, Subscriptions, View};
-use glfw::{Context, InitError, OpenGlProfileHint, WindowEvent, WindowHint, WindowMode};
+use crate::{Bounds, Command, Context, Model, Point, Subscriptions, View};
+use glfw::{Context as _, InitError, OpenGlProfileHint, WindowEvent, WindowHint, WindowMode};
 
 pub struct Program {
     glfw: glfw::Glfw,
@@ -65,17 +65,18 @@ impl Program {
         let mut size: Point = window.get_framebuffer_size().into();
         let dpi = window.get_size().0 as f32 / size.x as f32;
 
-        let mut canvas = Canvas::new(size, dpi, |str| window.get_proc_address(str))?;
+        let mut context = Context::new(size, dpi, |str| window.get_proc_address(str))?;
 
         let (mut model, cmd) = T::init(flags);
-        let mut view = model.view();
-        view.set_bounds(Bounds::from_size(size));
-        view.draw(&mut canvas);
+        let view = model.view();
+        let mut drawer = view.new_drawer(&mut context);
+        drawer.set_bounds(Bounds::from_size(size));
+        drawer.draw(&mut context);
 
         while !window.should_close() {
-            canvas.clear();
-            view.draw(&mut canvas);
-            // canvas.draw_image();
+            context.clear();
+            drawer.draw(&mut context);
+            // context.draw_image();
 
             window.swap_buffers();
             self.glfw.poll_events();
@@ -83,16 +84,16 @@ impl Program {
                 match event {
                     WindowEvent::FramebufferSize(width, height) => {
                         size = Point::new(width, height);
-                        canvas.set_size(size);
-                        view.set_bounds(Bounds::from_size(size))
+                        context.set_size(size);
+                        drawer.set_bounds(Bounds::from_size(size))
                     }
                     _ => (),
                 }
-                match view.process(event) {
+                match drawer.process(event) {
                     Some(message) => {
                         match model.update(message) {
                             Command::Update => {
-                                view = model.view();
+                                drawer = model.view().new_drawer(&mut context);
                             }
                             _ => {}
                         };
@@ -105,11 +106,11 @@ impl Program {
     }
 }
 
-struct EmptyModel<V: View> {
+struct EmptyModel<V: View<()>> {
     view: fn() -> V,
 }
 
-impl<V: View + 'static> Model for EmptyModel<V> {
+impl<V: View<()> + 'static> Model for EmptyModel<V> {
     type Flags = fn() -> V;
     type Message = ();
 
@@ -131,7 +132,7 @@ impl<V: View + 'static> Model for EmptyModel<V> {
 }
 
 impl Program {
-    pub fn show<V: View + 'static>(
+    pub fn show<V: View<()> + 'static>(
         &mut self,
         size: Size,
         title: &str,

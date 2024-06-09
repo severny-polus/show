@@ -1,5 +1,6 @@
 use crate::math::{Bounds, Point};
 
+#[derive(Clone, Copy)]
 pub enum Orientation {
     Vertical,
     Horizontal,
@@ -19,11 +20,11 @@ impl Default for Length {
 }
 
 impl Length {
-    pub fn pixels(self, total_length: u32, total_portions: f64) -> u32 {
+    pub fn pixels(self, parent_length: u32, total_portions: f64) -> u32 {
         match self {
             Length::Pixels(pixels) => pixels,
-            Length::Fill => Length::FillPortion(1.).pixels(total_length, total_portions),
-            Length::FillPortion(portion) => (total_length as f64 * portion / total_portions) as u32,
+            Length::Fill => Length::FillPortion(1.).pixels(parent_length, total_portions),
+            Length::FillPortion(portion) => (parent_length as f64 * portion / total_portions) as u32,
         }
     }
 

@@ -1,5 +1,6 @@
-use crate::{Bounds, Canvas, Color, Indents, Length};
+use crate::{Bounds, Context, Color, Indents, Length};
 
+#[derive(Clone, Copy)]
 pub struct Border {
     width: u32,
     color: Color,
@@ -12,9 +13,9 @@ impl Border {
 }
 
 impl Border {
-    pub fn draw(&self, canvas: &mut Canvas, bounds: Bounds) {
+    pub fn draw(&self, context: &mut Context, bounds: Bounds) {
         let width = self.width as i32;
-        canvas.draw_rectangle(
+        context.draw_rectangle(
             Bounds::new(
                 bounds.min.x,
                 bounds.min.y,
@@ -23,7 +24,7 @@ impl Border {
             ),
             self.color,
         );
-        canvas.draw_rectangle(
+        context.draw_rectangle(
             Bounds::new(
                 bounds.min.x,
                 bounds.max.y - width,
@@ -32,7 +33,7 @@ impl Border {
             ),
             self.color,
         );
-        canvas.draw_rectangle(
+        context.draw_rectangle(
             Bounds::new(
                 bounds.max.x - width,
                 bounds.min.y + width,
@@ -41,7 +42,7 @@ impl Border {
             ),
             self.color,
         );
-        canvas.draw_rectangle(
+        context.draw_rectangle(
             Bounds::new(
                 bounds.min.x + width,
                 bounds.min.y,
@@ -59,6 +60,7 @@ impl Default for Border {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Style {
     pub width: Length,
     pub height: Length,
@@ -69,12 +71,12 @@ pub struct Style {
 }
 
 impl Style {
-    pub fn draw_rectangle(&self, canvas: &mut Canvas, bounds: Bounds) {
-        canvas.draw_rectangle(
+    pub fn draw_rectangle(&self, context: &mut Context, bounds: Bounds) {
+        context.draw_rectangle(
             Indents::equal(self.border.width).shrink(bounds),
             self.backdround,
         );
-        self.border.draw(canvas, bounds);
+        self.border.draw(context, bounds);
     }
 }
 
