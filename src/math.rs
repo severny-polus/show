@@ -85,6 +85,10 @@ impl Point<f32> {
     pub fn zero() -> Self {
         Self::new(0., 0.)
     }
+
+    pub fn len(self) -> f32 {
+        (self.x.powi(2) + self.y.powi(2)).sqrt()
+    }
 }
 
 impl Default for Point<i32> {

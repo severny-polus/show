@@ -6,10 +6,10 @@ use show::{
     Action, Bounds, Color, Context, Drawer, Event, Length, MouseButton, Point, Program, Size, View,
 };
 
-const DT: f32 = 0.001; // шаг времени
+const DT: f32 = 0.0015; // шаг времени
 const TRAIL_LENGTH: usize = 100; // длина пути в шагах
 const PARTICLES_PER_FRAME: usize = 20; // количество появляющихся пылинок за шаг
-const T: usize = 60 * 10; // продолжительность жизни пылинки в кадрах
+const T: usize = 60 * 5; // продолжительность жизни пылинки в кадрах
 const STEPS_OUTSIDE: usize = T / 60; // количество шагов, на которые перепрыгивает возраст пылинки, пока её начало вне границ экрана
 
 const PARTICLES_TOTAL: usize = 1000;
@@ -34,8 +34,6 @@ struct SimulatorDrawer {
 
     trail_points: [Point<f32>; TRAIL_LENGTH],
     trail_colors: [Color; TRAIL_LENGTH],
-
-    trails: Vec<PolylineGradient>,
 }
 
 impl View for Simulator {
@@ -53,11 +51,6 @@ impl View for Simulator {
 
             trail_points: [Point::<f32>::zero(); TRAIL_LENGTH],
             trail_colors: [Color::transparent(); TRAIL_LENGTH],
-
-            trails: (0..PARTICLES_TOTAL)
-                .into_iter()
-                .map(|_| PolylineGradient::new(context))
-                .collect(),
         })
     }
 }
@@ -74,6 +67,11 @@ impl SimulatorDrawer {
                     Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5);
 
                 p = p + (self.velocity)(p).mul(DT);
+
+                let x = 1. - 1. / (1. + (self.velocity)(p).len());
+                let color = Color::from_hsv(240. + 180. * x, 1., 1.);
+                self.trail_colors[j] =
+                    color.with_alpha(j as f32 / TRAIL_LENGTH as f32 * brightness);
             }
             if p.y.abs() > self.scale || p.x.abs() > self.scale * self.size.x / self.size.y {
                 if t == 0 {
@@ -81,10 +79,6 @@ impl SimulatorDrawer {
                     continue;
                 }
                 self.points[i].1 = t + STEPS_OUTSIDE;
-            }
-            for j in 0..TRAIL_LENGTH {
-                self.trail_colors[j] =
-                    Color::white().with_alpha(j as f32 / TRAIL_LENGTH as f32 * brightness);
             }
 
             PolylineGradient::stream(context, zip(self.trail_points, self.trail_colors));
@@ -134,17 +128,19 @@ impl Drawer for SimulatorDrawer {
         if self.pressed {
             let steps = 5000;
             let mut p = self.p0;
-            let mut lines: Vec<Point<f32>> = Vec::with_capacity(steps);
+            let mut points: Vec<Point<f32>> = Vec::with_capacity(steps);
 
             for i in 0..steps {
                 let point = p.mul(self.size.y / self.scale);
-                lines.push(Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5));
+                points.push(Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5));
 
                 p = p + (self.velocity)(p).mul(DT);
             }
-            let colors: Vec<Color> = (0..lines.len())
-                .map(|i| Color::white().with_alpha((lines.len() - i) as f32 / lines.len() as f32))
+            let colors: Vec<Color> = (0..points.len())
+                .map(|i| Color::white().with_alpha((points.len() - i) as f32 / points.len() as f32))
                 .collect();
+
+            PolylineGradient::stream(context, zip(points, colors))
         }
 
         self.points = self
