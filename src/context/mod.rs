@@ -38,6 +38,7 @@ impl Context {
             gl.enable(glow::BLEND);
             gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA); // for transparency
             gl.enable(glow::MULTISAMPLE); // for antialiasing
+            gl.enable(glow::LINE_SMOOTH);
 
             let solid_program = util::create_program(
                 &gl,
@@ -75,6 +76,10 @@ impl Context {
 
     pub fn clear(&self) {
         unsafe { self.gl.clear(glow::COLOR_BUFFER_BIT) };
+    }
+
+    pub fn set_line_width(&mut self, line_width: f32) {
+        unsafe { self.gl.line_width(line_width) };
     }
 }
 

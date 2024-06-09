@@ -13,4 +13,4 @@ pub trait View<M = ()> {
     fn new_drawer(&self, context: &mut Context) -> Box<dyn Drawer<M>>;
 }
 
-pub type ViewFn<M> = dyn Fn(&mut Context) -> Box<dyn Drawer<M>>;
+pub trait ViewFn<M>: Fn(&mut Context) -> Box<dyn Drawer<M>> {}

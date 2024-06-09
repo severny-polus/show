@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    Bounds, Context, ContainerDrawer, Drawer, Event, Length, Orientation, Point, Style, View,
+    Context, ContainerDrawer, Drawer, Orientation, Style, View,
 };
 
 pub struct Container<M> {
