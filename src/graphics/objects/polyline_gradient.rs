@@ -2,47 +2,10 @@ use std::mem::size_of;
 
 use glow::{Buffer, HasContext, VertexArray};
 
-use crate::{Color, Context, Point};
-
-use super::util;
-
-#[repr(u32)]
-pub enum DrawMode {
-    Static = glow::STATIC_DRAW,
-    Dynamic = glow::DYNAMIC_DRAW,
-    Stream = glow::STREAM_DRAW,
-}
-
-pub trait Object {
-    type Vertex;
-
-    fn new(context: &mut Context) -> Self;
-
-    fn store(
-        &mut self,
-        context: &mut Context,
-        data: impl Iterator<Item = Self::Vertex>,
-        mode: DrawMode,
-    );
-
-    fn draw(&self, context: &mut Context);
-
-    fn delete(&self, context: &mut Context);
-
-    fn draw_stream(&mut self, context: &mut Context, data: impl Iterator<Item = Self::Vertex>) {
-        self.store(context, data, DrawMode::Stream);
-        self.draw(context);
-    }
-
-    fn stream(context: &mut Context, data: impl Iterator<Item = Self::Vertex>)
-    where
-        Self: Sized,
-    {
-        let mut object = Self::new(context);
-        object.draw_stream(context, data);
-        object.delete(context);
-    }
-}
+use crate::{
+    graphics::{util::f32s_to_u8s, DrawMode, Object},
+    Color, Context, Point,
+};
 
 pub struct PolylineGradient {
     vertex_array: VertexArray,
@@ -114,11 +77,9 @@ impl Object for PolylineGradient {
             context
                 .gl
                 .bind_buffer(glow::ARRAY_BUFFER, Some(self.buffer));
-            context.gl.buffer_data_u8_slice(
-                glow::ARRAY_BUFFER,
-                util::floats_to_bytes(&data),
-                mode as u32,
-            );
+            context
+                .gl
+                .buffer_data_u8_slice(glow::ARRAY_BUFFER, f32s_to_u8s(&data), mode as u32);
         }
     }
 

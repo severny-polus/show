@@ -1,5 +1,5 @@
 
-pub mod context;
+pub mod graphics;
 pub mod command;
 pub mod event;
 pub mod math;
@@ -8,7 +8,7 @@ pub mod program;
 pub mod view;
 pub mod drawer;
 
-pub use context::{Context, Color};
+pub use graphics::{Context, Color};
 pub use command::*;
 pub use event::*;
 pub use math::*;

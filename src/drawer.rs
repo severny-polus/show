@@ -1,5 +1,5 @@
 use crate::{
-    container::Container, Bounds, Context, Event, Length, Orientation, Point, Style, View,
+    Bounds, Context, Event, Length, Orientation, Point, Style,
 };
 
 pub trait Drawer<M = ()> {

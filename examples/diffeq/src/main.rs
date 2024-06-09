@@ -2,7 +2,7 @@ use std::iter::zip;
 
 use rand::prelude::*;
 use show::{
-    context::{DrawMode, Object, PolylineGradient},
+    graphics::{objects::PolylineGradient, Object},
     Action, Bounds, Color, Context, Drawer, Event, Length, MouseButton, Point, Program, Size, View,
 };
 

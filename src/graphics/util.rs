@@ -42,7 +42,7 @@ pub(super) unsafe fn create_program(
     }
 }
 
-pub(super) unsafe fn floats_to_bytes(floats: &[f32]) -> &[u8] {
+pub(super) unsafe fn f32s_to_u8s(floats: &[f32]) -> &[u8] {
     from_raw_parts(
         floats.as_ptr() as *const u8,
         floats.len() * size_of::<f32>(),
@@ -52,6 +52,6 @@ pub(super) unsafe fn floats_to_bytes(floats: &[f32]) -> &[u8] {
 pub(super) unsafe fn create_buffer(gl: &Context, data: &[f32], mode: u32) -> Buffer {
     let buffer = gl.create_buffer().unwrap();
     gl.bind_buffer(glow::ARRAY_BUFFER, Some(buffer));
-    gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, floats_to_bytes(data), mode);
+    gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, f32s_to_u8s(data), mode);
     buffer
 }
