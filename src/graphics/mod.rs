@@ -70,15 +70,27 @@ impl Context {
 
     pub fn set_size(&mut self, size: Point) {
         self.size = size.to_f32();
-        unsafe { self.gl.viewport(0, 0, size.x, size.y) };
+        unsafe { self.gl.viewport(0, 0, size.x, size.y) }
     }
 
     pub fn clear(&self) {
-        unsafe { self.gl.clear(glow::COLOR_BUFFER_BIT) };
+        unsafe { self.gl.clear(glow::COLOR_BUFFER_BIT) }
     }
 
     pub fn set_line_width(&mut self, line_width: f32) {
-        unsafe { self.gl.line_width(line_width) };
+        unsafe { self.gl.line_width(line_width) }
+    }
+
+    pub fn set_color(&mut self, color: Color) {
+        unsafe {
+            self.gl.uniform_4_f32(
+                Some(&self.solid_program_color),
+                color.r,
+                color.g,
+                color.b,
+                color.a,
+            )
+        }
     }
 }
 
