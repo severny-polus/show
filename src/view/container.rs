@@ -1,8 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{
-    Context, ContainerDrawer, Drawer, Orientation, Style, View,
-};
+use crate::{graphics::Context, ContainerDrawer, Drawer, Orientation, Style, View};
 
 pub struct Container<M> {
     style: Style,
@@ -25,7 +23,7 @@ impl<M> Container<M> {
 }
 
 impl<M: 'static> View<M> for Container<M> {
-    fn new_drawer(&self, context: &mut Context) -> Box<dyn Drawer<M>> {
+    fn new_drawer(&self, context: &Context) -> Box<dyn Drawer<M>> {
         Box::new(ContainerDrawer {
             bounds: Default::default(),
             style: self.style,

@@ -1,6 +1,5 @@
 use show::{
-    style::Border, container::Row, Color, Command, Indents, Model, Program, Size, Style, Subscriptions,
-    View,
+    container::Row, graphics::Color, style::Border, Command, Indents, Model, Program, Size, Style, Subscriptions, View
 };
 
 fn main() {

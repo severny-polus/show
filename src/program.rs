@@ -1,4 +1,6 @@
-use crate::{Bounds, Command, Context, Model, Point, Subscriptions, View};
+use std::rc::Rc;
+
+use crate::{graphics::Context, Bounds, Command, Model, Point, Subscriptions, View};
 use glfw::{Context as _, InitError, OpenGlProfileHint, WindowEvent, WindowHint, WindowMode};
 
 pub struct Program {
@@ -69,14 +71,12 @@ impl Program {
 
         let (mut model, cmd) = T::init(flags);
         let view = model.view();
-        let mut drawer = view.new_drawer(&mut context);
-        drawer.set_bounds(Bounds::from_size(size));
-        drawer.draw(&mut context);
+        let mut drawer = view.new_drawer(&context);
+        drawer.set_bounds(&context, Bounds::from_size(size));
 
         while !window.should_close() {
             context.clear();
-            drawer.draw(&mut context);
-            // context.draw_image();
+            drawer.draw(&context);
 
             window.swap_buffers();
             self.glfw.poll_events();
@@ -85,7 +85,7 @@ impl Program {
                     WindowEvent::FramebufferSize(width, height) => {
                         size = Point::new(width, height);
                         context.set_size(size);
-                        drawer.set_bounds(Bounds::from_size(size))
+                        drawer.set_bounds(&context, Bounds::from_size(size))
                     }
                     _ => (),
                 }
@@ -93,7 +93,7 @@ impl Program {
                     Some(message) => {
                         match model.update(message) {
                             Command::Update => {
-                                drawer = model.view().new_drawer(&mut context);
+                                drawer = model.view().new_drawer(&context);
                             }
                             _ => {}
                         };

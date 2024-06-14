@@ -2,13 +2,13 @@ use std::iter::zip;
 
 use rand::prelude::*;
 use show::{
-    graphics::{objects::PolylineGradient, Object},
-    Action, Bounds, Color, Context, Drawer, Event, Length, MouseButton, Point, Program, Size, View,
+    graphics::{Color, Context, DrawMode, PointColorData, PointData, Shape, VertexData},
+    Action, Bounds, Drawer, Event, Length, MouseButton, Point, Program, Size, View,
 };
 
-const DT: f32 = 0.0015; // шаг времени
-const TRAIL_LENGTH: usize = 100; // длина пути в шагах
-const PARTICLES_PER_FRAME: usize = 20; // количество появляющихся пылинок за шаг
+const DT: f32 = 0.002; // шаг времени
+const TRAIL_LENGTH: usize = 50; // длина пути в шагах
+const PARTICLES_PER_FRAME: usize = 50; // количество появляющихся пылинок за шаг
 const T: usize = 60 * 5; // продолжительность жизни пылинки в кадрах
 const STEPS_OUTSIDE: usize = T / 60; // количество шагов, на которые перепрыгивает возраст пылинки, пока её начало вне границ экрана
 
@@ -26,37 +26,46 @@ struct SimulatorDrawer {
     scale: f32,
 
     bounds: Bounds,
+
     size: Point<f32>,
-    p0: Point<f32>,
-    points: Vec<(Point<f32>, usize)>,
     rng: ThreadRng,
     pressed: bool,
 
+    p0: Point<f32>,
+    points: Vec<(Point<f32>, usize)>,
+
     trail_points: [Point<f32>; TRAIL_LENGTH],
     trail_colors: [Color; TRAIL_LENGTH],
+
+    axes: PointData,
 }
 
 impl View for Simulator {
-    fn new_drawer(&self, context: &mut Context) -> Box<dyn Drawer<()>> {
+    fn new_drawer(&self, context: &Context) -> Box<dyn Drawer<()>> {
         Box::new(SimulatorDrawer {
             velocity: self.velocity,
             scale: self.scale,
 
             bounds: Bounds::zero(),
+
             size: Point::<f32>::zero(),
-            p0: Point::<f32>::zero(),
-            points: Vec::new(),
             rng: rand::thread_rng(),
             pressed: false,
 
+            p0: Point::<f32>::zero(),
+
+            points: Vec::new(),
+
             trail_points: [Point::<f32>::zero(); TRAIL_LENGTH],
             trail_colors: [Color::transparent(); TRAIL_LENGTH],
+
+            axes: PointData::new(context),
         })
     }
 }
 
 impl SimulatorDrawer {
-    fn draw_trails(&mut self, context: &mut Context) {
+    fn draw_trails(&mut self, context: &Context) {
         for i in 0..self.points.len() {
             let (mut p, t) = self.points[i].clone();
             let brightness = 1. - (2. * t as f32 / T as f32 - 1.).powi(2);
@@ -81,7 +90,11 @@ impl SimulatorDrawer {
                 self.points[i].1 = t + STEPS_OUTSIDE;
             }
 
-            PolylineGradient::stream(context, zip(self.trail_points, self.trail_colors));
+            PointColorData::draw_once(
+                context,
+                zip(self.trail_points, self.trail_colors),
+                Shape::LineStrip,
+            );
         }
     }
 }
@@ -95,9 +108,20 @@ impl Drawer for SimulatorDrawer {
         Length::Fill
     }
 
-    fn set_bounds(&mut self, bounds: Bounds) {
+    fn set_bounds(&mut self, context: &Context, bounds: Bounds) {
         self.bounds = bounds;
-        self.size = bounds.size().to_f32()
+        self.size = bounds.size().to_f32();
+        self.axes.buffer_data(
+            context,
+            [
+                Point::new(self.bounds.min.x, self.bounds.y().center()).to_f32(),
+                Point::new(self.bounds.max.x, self.bounds.y().center()).to_f32(),
+                Point::new(self.bounds.x().center(), self.bounds.min.y).to_f32(),
+                Point::new(self.bounds.x().center(), self.bounds.max.y).to_f32(),
+            ]
+            .into_iter(),
+            DrawMode::Dynamic,
+        )
     }
 
     fn process(&mut self, event: Event) -> Option<()> {
@@ -122,7 +146,10 @@ impl Drawer for SimulatorDrawer {
         None
     }
 
-    fn draw(&mut self, context: &mut Context) {
+    fn draw(&mut self, context: &Context) {
+        context.set_color(Color::from_hsva(0., 0., 1., 0.5));
+        self.axes.draw(context, Shape::Lines);
+
         self.draw_trails(context);
 
         if self.pressed {
@@ -130,7 +157,7 @@ impl Drawer for SimulatorDrawer {
             let mut p = self.p0;
             let mut points: Vec<Point<f32>> = Vec::with_capacity(steps);
 
-            for i in 0..steps {
+            for _ in 0..steps {
                 let point = p.mul(self.size.y / self.scale);
                 points.push(Point::new(point.x + self.size.x, point.y + self.size.y).mul(0.5));
 
@@ -140,7 +167,7 @@ impl Drawer for SimulatorDrawer {
                 .map(|i| Color::white().with_alpha((points.len() - i) as f32 / points.len() as f32))
                 .collect();
 
-            PolylineGradient::stream(context, zip(points, colors))
+            PointColorData::draw_once(context, zip(points, colors), Shape::LineStrip)
         }
 
         self.points = self

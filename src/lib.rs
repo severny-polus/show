@@ -8,7 +8,6 @@ pub mod program;
 pub mod view;
 pub mod drawer;
 
-pub use graphics::{Context, Color};
 pub use command::*;
 pub use event::*;
 pub use math::*;

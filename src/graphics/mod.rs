@@ -1,7 +1,9 @@
 pub mod color;
-pub mod objects;
+pub mod object;
+pub mod vertices;
 
 pub use color::Color;
+pub use vertices::*;
 
 mod gradient;
 mod solid;
@@ -77,11 +79,11 @@ impl Context {
         unsafe { self.gl.clear(glow::COLOR_BUFFER_BIT) }
     }
 
-    pub fn set_line_width(&mut self, line_width: f32) {
+    pub fn set_line_width(&self, line_width: f32) {
         unsafe { self.gl.line_width(line_width) }
     }
 
-    pub fn set_color(&mut self, color: Color) {
+    pub fn set_color(&self, color: Color) {
         unsafe {
             self.gl.uniform_4_f32(
                 Some(&self.solid_program_color),
@@ -234,43 +236,5 @@ impl Context {
             bounds.max_min().to_f32(),
             color,
         )
-    }
-}
-
-#[repr(u32)]
-pub enum DrawMode {
-    Static = glow::STATIC_DRAW,
-    Dynamic = glow::DYNAMIC_DRAW,
-    Stream = glow::STREAM_DRAW,
-}
-
-pub trait Object {
-    type Vertex;
-
-    fn new(context: &mut Context) -> Self;
-
-    fn store(
-        &mut self,
-        context: &mut Context,
-        data: impl Iterator<Item = Self::Vertex>,
-        mode: DrawMode,
-    );
-
-    fn draw(&self, context: &mut Context);
-
-    fn delete(&self, context: &mut Context);
-
-    fn draw_stream(&mut self, context: &mut Context, data: impl Iterator<Item = Self::Vertex>) {
-        self.store(context, data, DrawMode::Stream);
-        self.draw(context);
-    }
-
-    fn stream(context: &mut Context, data: impl Iterator<Item = Self::Vertex>)
-    where
-        Self: Sized,
-    {
-        let mut object = Self::new(context);
-        object.draw_stream(context, data);
-        object.delete(context);
     }
 }

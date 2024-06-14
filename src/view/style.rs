@@ -1,4 +1,4 @@
-use crate::{Bounds, Context, Color, Indents, Length};
+use crate::{graphics::{Color, Context}, Bounds, Indents, Length};
 
 #[derive(Clone, Copy)]
 pub struct Border {
@@ -13,7 +13,7 @@ impl Border {
 }
 
 impl Border {
-    pub fn draw(&self, context: &mut Context, bounds: Bounds) {
+    pub fn draw(&self, context: &Context, bounds: Bounds) {
         let width = self.width as i32;
         context.draw_rectangle(
             Bounds::new(
@@ -71,7 +71,7 @@ pub struct Style {
 }
 
 impl Style {
-    pub fn draw_rectangle(&self, context: &mut Context, bounds: Bounds) {
+    pub fn draw_rectangle(&self, context: &Context, bounds: Bounds) {
         context.draw_rectangle(
             Indents::equal(self.border.width).shrink(bounds),
             self.backdround,
