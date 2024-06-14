@@ -27,14 +27,14 @@ pub trait Drawer<M = ()> {
     }
 }
 
-pub struct ContainerDrawer<M> {
+pub struct CommonDrawer<M> {
     pub bounds: Bounds,
     pub style: Style,
     pub orientation: Orientation,
     pub children: Vec<Box<dyn Drawer<M>>>,
 }
 
-impl<M> ContainerDrawer<M> {
+impl<M> CommonDrawer<M> {
     fn count_child_portions_x(&self) -> f64 {
         Length::count_portions(self.children.iter().map(|child| child.width()))
     }
@@ -44,7 +44,7 @@ impl<M> ContainerDrawer<M> {
     }
 }
 
-impl<M> Drawer<M> for ContainerDrawer<M> {
+impl<M> Drawer<M> for CommonDrawer<M> {
     fn width(&self) -> Length {
         self.style.width
     }

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{graphics::Context, ContainerDrawer, Drawer, Orientation, Style, View};
+use crate::{graphics::Context, CommonDrawer, Drawer, Orientation, Style, View};
 
 pub struct Container<M> {
     style: Style,
@@ -24,7 +24,7 @@ impl<M> Container<M> {
 
 impl<M: 'static> View<M> for Container<M> {
     fn new_drawer(&self, context: &Context) -> Box<dyn Drawer<M>> {
-        Box::new(ContainerDrawer {
+        Box::new(CommonDrawer {
             bounds: Default::default(),
             style: self.style,
             orientation: self.orientation,
