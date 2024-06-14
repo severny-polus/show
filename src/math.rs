@@ -161,12 +161,12 @@ impl Interval {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Bounds {
-    pub min: Point<i32>,
-    pub max: Point<i32>,
+pub struct Bounds<T = i32> {
+    pub min: Point<T>,
+    pub max: Point<T>,
 }
 
-impl Bounds {
+impl Bounds<i32> {
     pub fn from_intervals(x: Interval, y: Interval) -> Self {
         Self {
             min: Point::new(x.min, y.min),

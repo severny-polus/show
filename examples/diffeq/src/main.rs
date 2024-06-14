@@ -77,6 +77,11 @@ fn brightness_fn(t: f32) -> f32 {
     1. - (2. * t / LIFETIME as f32 - 1.).powi(2)
 }
 
+fn fade_fn(l: f32) -> f32 {
+    let l_max = TRAIL_LENGTH as f32;
+    return (l / l_max).sqrt();
+}
+
 impl SimulatorDrawer {
     fn draw_trails(&mut self, context: &Context) {
         for i in 0..self.initialized_particles {
@@ -95,16 +100,15 @@ impl SimulatorDrawer {
 
                 let x = 1. - 1. / (1. + (self.velocity)(p).len());
                 let color = Color::from_hsv(240. + 180. * x, 1., 1.);
-                self.trail_colors[j] =
-                    color.with_alpha(j as f32 / TRAIL_LENGTH as f32 * brightness);
+                self.trail_colors[j] = color.with_alpha(fade_fn(j as f32) * brightness);
             }
-            if p.y.abs() > self.max_y || p.x.abs() > self.max_y * self.size.x / self.size.y {
-                // if t == 0 {
-                //     self.particles[i].1 += LIFETIME;
-                //     continue;
-                // }
-                // self.points[i].1 = t + STEPS_OUTSIDE;
-            }
+            // if p.y.abs() > self.max_y || p.x.abs() > self.max_y * self.size.x / self.size.y {
+            //     if t == 0 {
+            //         self.particles[i].1 += LIFETIME;
+            //         continue;
+            //     }
+            //     self.points[i].1 = t + STEPS_OUTSIDE;
+            // }
 
             self.trails[i].draw_stream(
                 context,
@@ -192,9 +196,12 @@ impl Drawer for SimulatorDrawer {
             self.particles[i] = p + velocity.mul(DT);
         }
         for i in self.particles_counter..self.particles_counter + PARTICLES_PER_FRAME {
+            // let multiplier = (self.size.x / self.size.y).max(self.size.y / self.size.x);
+            let out_of_bounds = 1.5;
             self.particles[i] = Point::new(
-                (self.rng.gen::<f32>() * 2. - 1.) * self.max_y * self.size.x / self.size.y,
-                (self.rng.gen::<f32>() * 2. - 1.) * self.max_y * self.size.x / self.size.y,
+                (self.rng.gen::<f32>() * 2. - 1.) * self.max_y * out_of_bounds * self.size.x
+                    / self.size.y,
+                (self.rng.gen::<f32>() * 2. - 1.) * self.max_y * out_of_bounds,
             );
         }
         self.particles_counter =
