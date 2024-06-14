@@ -1,2 +1,4 @@
 # show
-Rust GUI framework based on GLFW
+Minimal GUI library for Rust based on GLFW
+
+Currently in development
