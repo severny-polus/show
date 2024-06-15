@@ -27,7 +27,7 @@ pub enum Shape {
     Quads = glow::QUADS,
 }
 
-pub trait VertexData {
+pub trait VertexArray {
     type Vertex;
 
     fn new(context: &Context) -> Self;
@@ -67,13 +67,13 @@ fn norm(p: Point<f32>, max: Point<f32>) -> Point<f32> {
     Point::new(2. * (p.x + 0.5) / max.x - 1., 2. * (p.y + 0.5) / max.y - 1.)
 }
 
-pub struct PointData {
+pub struct PointArray {
     vertex_array: glow::VertexArray,
     buffer: Buffer,
     count: usize,
 }
 
-impl VertexData for PointData {
+impl VertexArray for PointArray {
     type Vertex = Point<f32>;
 
     fn new(context: &Context) -> Self {
@@ -145,13 +145,13 @@ impl VertexData for PointData {
     }
 }
 
-pub struct PointColorData {
+pub struct PointColorArray {
     vertex_array: glow::VertexArray,
     buffer: Buffer,
     count: usize,
 }
 
-impl VertexData for PointColorData {
+impl VertexArray for PointColorArray {
     type Vertex = (Point<f32>, Color);
 
     fn new(context: &Context) -> Self {
